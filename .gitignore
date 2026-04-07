@@ -67,6 +67,9 @@ coverage/
 build/
 *.msi
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 ## Misc
 *.log
