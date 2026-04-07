@@ -11,6 +11,7 @@ interface OrderCompleteState {
   total: number;
   paymentMethod: PaymentMethod;
   change: number;
+  offline: boolean;
 }
 
 @Component({
@@ -22,9 +23,14 @@ interface OrderCompleteState {
       <mat-card class="complete-card">
         <mat-card-content>
           <div class="success-icon">
-            <mat-icon>check_circle</mat-icon>
+            <mat-icon>{{ orderState().offline ? 'cloud_off' : 'check_circle' }}</mat-icon>
           </div>
-          <h1>Order Complete</h1>
+          <h1>{{ orderState().offline ? 'Order Queued' : 'Order Complete' }}</h1>
+          @if (orderState().offline) {
+            <div class="offline-notice">
+              This order was saved offline and will sync when the connection is restored.
+            </div>
+          }
           <div class="order-number">#{{ orderState().orderNumber }}</div>
 
           <div class="details">
@@ -71,6 +77,14 @@ interface OrderCompleteState {
         width: 72px;
         height: 72px;
         color: #4caf50;
+      }
+      .offline-notice {
+        background: var(--mat-sys-tertiary-container);
+        color: var(--mat-sys-on-tertiary-container);
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 14px;
+        margin-bottom: 16px;
       }
       h1 {
         font-size: 28px;
@@ -119,6 +133,7 @@ export class OrderCompletePage implements OnInit {
     total: 0,
     paymentMethod: PaymentMethod.Cash,
     change: 0,
+    offline: false,
   });
 
   ngOnInit(): void {
@@ -130,6 +145,7 @@ export class OrderCompletePage implements OnInit {
         total: state.total,
         paymentMethod: state.paymentMethod,
         change: state.change ?? 0,
+        offline: state.offline ?? false,
       });
     }
   }

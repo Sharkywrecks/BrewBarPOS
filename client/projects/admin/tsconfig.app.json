@@ -4,7 +4,15 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/app",
-    "types": []
+    "types": ["node"],
+    "paths": {
+      "api-client": ["../../libs/api-client/src/public-api.ts"],
+      "auth": ["../../libs/auth/src/public-api.ts"],
+      "printing": ["../../libs/printing/src/public-api.ts"],
+      "sync": ["../../libs/sync/src/public-api.ts"],
+      "shared-models": ["../../libs/shared-models/src/public-api.ts"],
+      "ui": ["../../libs/ui/src/public-api.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts"]

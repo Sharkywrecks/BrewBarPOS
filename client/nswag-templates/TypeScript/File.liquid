@@ -126,7 +126,7 @@ namespace {{ Namespace }} {
 {%- endif -%}
 {% if RequiresExceptionClass -%}
 {% if ExportTypes %}export {% endif %}class {{ ExceptionClassName }} extends Error {
-    {% if SupportsOverrideKeyword %}override {% endif %}message: string;
+    override message: string;
     status: number;
     response: string;
     headers: { [key: string]: any; };

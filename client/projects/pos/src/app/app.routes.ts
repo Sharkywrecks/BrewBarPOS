@@ -25,6 +25,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./order-complete/order-complete.page').then((m) => m.OrderCompletePage),
       },
+      {
+        path: 'history',
+        loadComponent: () => import('./history/order-history.page').then((m) => m.OrderHistoryPage),
+      },
       { path: '', redirectTo: 'register', pathMatch: 'full' },
     ],
   },

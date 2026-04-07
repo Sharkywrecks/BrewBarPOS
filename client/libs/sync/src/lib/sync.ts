@@ -1,9 +1,5 @@
-import { Component } from '@angular/core';
-
-@Component({
-  selector: 'lib-sync',
-  imports: [],
-  template: ` <p>sync works!</p> `,
-  styles: ``,
-})
-export class Sync {}
+export { db, BrewBarDB } from './db';
+export type { PendingOrder, SavedCart } from './db';
+export { OutboxService } from './outbox.service';
+export { SyncEngineService, SYNC_API_BASE_URL } from './sync-engine.service';
+export { CartPersistenceService } from './cart-persistence.service';

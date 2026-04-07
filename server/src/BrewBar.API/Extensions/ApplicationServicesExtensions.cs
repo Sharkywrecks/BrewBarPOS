@@ -1,6 +1,8 @@
+using System.Threading.RateLimiting;
 using BrewBar.Core.Interfaces;
 using BrewBar.Infrastructure.Data;
 using BrewBar.Infrastructure.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace BrewBar.API.Extensions;
@@ -10,6 +12,18 @@ public static class ApplicationServicesExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddControllers();
+
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = 429;
+            options.AddFixedWindowLimiter("fixed", opt =>
+            {
+                opt.PermitLimit = 100;
+                opt.Window = TimeSpan.FromMinutes(1);
+                opt.QueueLimit = 10;
+                opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+            });
+        });
 
         var provider = config["DatabaseProvider"] ?? "MySql";
 

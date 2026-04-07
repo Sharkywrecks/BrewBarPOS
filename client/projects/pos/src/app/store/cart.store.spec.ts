@@ -1,7 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { CartStore } from './cart.store';
 import { CartLineItem } from './cart.models';
+import { SettingsService } from '../services/settings.service';
+import { CartPersistenceService } from 'sync';
+import { HttpClient } from '@angular/common/http';
+import { API_BASE_URL } from 'api-client';
 
 function makeItem(overrides: Partial<CartLineItem> = {}): CartLineItem {
   return {
@@ -20,7 +24,27 @@ describe('CartStore', () => {
   let store: CartStore;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [
+        CartStore,
+        {
+          provide: SettingsService,
+          useValue: {
+            taxRate: 0.0875,
+            storeName: 'Test',
+            settings: { taxRate: 0.0875 },
+            loaded: { value: true },
+            load: vi.fn(),
+          },
+        },
+        {
+          provide: CartPersistenceService,
+          useValue: { save: vi.fn(), load: vi.fn().mockResolvedValue(null), clear: vi.fn() },
+        },
+        { provide: HttpClient, useValue: {} },
+        { provide: API_BASE_URL, useValue: 'http://localhost:5000' },
+      ],
+    });
     store = TestBed.inject(CartStore);
   });
 

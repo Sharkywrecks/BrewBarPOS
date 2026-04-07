@@ -4,6 +4,7 @@ using BrewBar.Core.Entities.OrderAggregate;
 using BrewBar.Core.Entities.PaymentAggregate;
 using BrewBar.Core.Enums;
 using BrewBar.Core.Interfaces;
+using BrewBar.Core.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -107,5 +108,47 @@ public class PaymentsController : BaseApiController
             Total = p.Total,
             CreatedAtUtc = p.CreatedAtUtc
         }).ToList());
+    }
+
+    [HttpPost("{id}/refund")]
+    [Authorize(Roles = Roles.AdminOrManager)]
+    public async Task<ActionResult<PaymentDto>> RefundPayment(int id, CancellationToken ct)
+    {
+        var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(id, ct);
+        if (payment == null) return NotFound(new ApiResponse(404));
+        if (payment.Status == PaymentStatus.Refunded)
+            return BadRequest(new ApiResponse(400, "Payment is already refunded"));
+        if (payment.Status != PaymentStatus.Completed)
+            return BadRequest(new ApiResponse(400, "Only completed payments can be refunded"));
+
+        payment.Status = PaymentStatus.Refunded;
+
+        // Reopen the order if all payments are now refunded
+        var order = await _unitOfWork.Repository<Order>().GetByIdAsync(payment.OrderId, ct);
+        if (order != null)
+        {
+            var remainingCompleted = await _unitOfWork.GetQueryable<Payment>()
+                .Where(p => p.OrderId == payment.OrderId && p.Id != id && p.Status == PaymentStatus.Completed)
+                .SumAsync(p => p.Total, ct);
+
+            if (remainingCompleted < order.Total)
+            {
+                order.Status = OrderStatus.Open;
+            }
+        }
+
+        await _unitOfWork.Complete(ct);
+
+        return Ok(new PaymentDto
+        {
+            Id = payment.Id,
+            OrderId = payment.OrderId,
+            Method = payment.Method,
+            Status = payment.Status,
+            AmountTendered = payment.AmountTendered,
+            ChangeGiven = payment.ChangeGiven,
+            Total = payment.Total,
+            CreatedAtUtc = payment.CreatedAtUtc
+        });
     }
 }

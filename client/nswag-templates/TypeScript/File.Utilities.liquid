@@ -52,20 +52,12 @@ function blobToText(blob: any): Observable<string> {
         return;
       }
 
-      if (typeof Buffer !== 'undefined' && Buffer.isBuffer(blob)) {
-        observer.next(blob.toString('utf8'));
-        observer.complete();
-        return;
-      }
-
-      // <-- FIXED SECTION -->
       if (blob instanceof ArrayBuffer || ArrayBuffer.isView(blob)) {
         const bytes = blob instanceof Uint8Array
           ? blob
           : new Uint8Array(blob as ArrayBufferLike);
 
-        const decoder = getTextDecoder();
-        observer.next(decoder.decode(bytes));
+        observer.next(new TextDecoder().decode(bytes));
         observer.complete();
         return;
       }
@@ -87,16 +79,6 @@ function blobToText(blob: any): Observable<string> {
       observer.complete();
     }
   });
-}
-
-function getTextDecoder(): TextDecoder {
-  if (typeof TextDecoder !== 'undefined') {
-    return new TextDecoder();
-  }
-
-  // Node fallback
-  const { TextDecoder: NodeTextDecoder } = require('util');
-  return new NodeTextDecoder('utf-8');
 }
 
 {% elsif Framework.IsAngularJS -%}

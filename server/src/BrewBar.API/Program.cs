@@ -5,8 +5,8 @@ using BrewBar.Infrastructure.Data.Seed;
 using BrewBar.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 
-// Auto-detect Desktop environment when appsettings.Desktop.json is present alongside the EXE
-var contentRoot = AppContext.BaseDirectory;
+// Use the directory containing the EXE (not AppContext.BaseDirectory which may be a temp extraction dir for single-file)
+var contentRoot = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
 var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 if (string.IsNullOrEmpty(envName) && File.Exists(Path.Combine(contentRoot, "appsettings.Desktop.json")))
 {
@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = contentRoot,
+    WebRootPath = Path.Combine(contentRoot, "wwwroot"),
     EnvironmentName = envName
 });
 
@@ -44,11 +45,20 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error during migration/seed");
+        logger.LogCritical(ex, "Error during migration/seed — shutting down");
+        throw;
     }
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
+
+// Serve Angular static files (desktop mode)
+var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(wwwroot))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -56,19 +66,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseRouting();
 app.UseCors("CorsPolicy");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health/ready", () => Results.Ok(new { status = "healthy" }));
 
-// Serve Angular static files (desktop mode) — only when wwwroot exists
-var wwwroot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+// SPA fallbacks — after all other routes so API endpoints aren't caught
 if (Directory.Exists(wwwroot))
 {
-    app.UseStaticFiles();
     app.MapFallbackToFile("/admin/{**slug}", "admin/index.html");
-    app.MapFallbackToFile("{**slug}", "pos/index.html");
+    app.MapFallbackToFile("{**slug}", "index.html");
 }
 
 app.Run();

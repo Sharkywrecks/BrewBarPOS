@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CategoryDto, ProductDto } from 'api-client';
 import { MenuService } from '../services/menu.service';
 import { CartStore } from '../store/cart.store';
@@ -23,6 +24,7 @@ import { OrderNotesDialog, OrderNotesDialogData } from './order-notes.dialog';
     MatBottomSheetModule,
     MatDialogModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
   ],
   template: `
     <div class="register-layout">
@@ -79,21 +81,37 @@ export class RegisterPage implements OnInit {
   private readonly router = inject(Router);
   private readonly bottomSheet = inject(MatBottomSheet);
   private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
 
   protected readonly selectedCategoryIndex = signal(0);
+  protected readonly loadError = signal(false);
 
   protected currentProducts = signal<ProductDto[]>([]);
 
   async ngOnInit(): Promise<void> {
-    await this.menu.loadCategories();
-    this.updateProducts();
+    try {
+      await this.menu.loadCategories();
+      this.updateProducts();
+    } catch {
+      this.loadError.set(true);
+      this.snackBar
+        .open('Failed to load menu. Check your connection and try again.', 'Retry', {
+          duration: 0,
+        })
+        .onAction()
+        .subscribe(() => this.ngOnInit());
+    }
   }
 
   async onCategorySelected(cat: CategoryDto): Promise<void> {
     const cats = this.menu.categories();
     this.selectedCategoryIndex.set(cats.findIndex((c) => c.id === cat.id));
-    await this.menu.selectCategory(cat.id!);
-    this.updateProducts();
+    try {
+      await this.menu.selectCategory(cat.id!);
+      this.updateProducts();
+    } catch {
+      this.snackBar.open('Failed to load category.', 'Dismiss', { duration: 3000 });
+    }
   }
 
   onProductSelected(product: ProductDto): void {

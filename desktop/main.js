@@ -2,22 +2,58 @@ const { app, BrowserWindow } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const treeKill = require('tree-kill');
 
 let mainWindow;
 let apiProcess;
 
-const API_PORT = 5000;
-const API_URL = `http://localhost:${API_PORT}`;
+// ─── Configuration ─────────────────────────────────────────────
+// Deployment modes:
+//   "standalone"  — Electron + local API + SQLite (default)
+//   "terminal"    — Electron frontend only, API is remote
+
+function loadConfig() {
+  const configPaths = [
+    // Packaged app
+    path.join(process.resourcesPath || '', 'config', 'deployment.json'),
+    // Installed via MSI (next to the exe)
+    path.join(path.dirname(process.execPath), 'deployment.json'),
+    // Dev fallback
+    path.join(__dirname, 'deployment.json'),
+  ];
+
+  for (const p of configPaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p, 'utf-8');
+        console.log(`[Config] Loaded from ${p}`);
+        return JSON.parse(raw);
+      } catch {
+        console.warn(`[Config] Failed to parse ${p}`);
+      }
+    }
+  }
+
+  // Default: standalone
+  return { mode: 'standalone' };
+}
+
+const config = loadConfig();
+const MODE = config.mode || 'standalone';
+const API_PORT = config.apiPort || 5000;
+const API_URL = MODE === 'terminal'
+  ? config.apiUrl
+  : `http://localhost:${API_PORT}`;
+
+console.log(`[Config] Mode: ${MODE}, API URL: ${API_URL}`);
+
+// ─── API Management (standalone mode only) ─────────────────────
 
 function getApiExePath() {
-  // In packaged app, resources are in process.resourcesPath
-  // In dev, use the build output directly
   const packaged = path.join(process.resourcesPath, 'api', 'BrewBar.API.exe');
   if (fs.existsSync(packaged)) return packaged;
-
-  // Dev fallback
   return path.join(__dirname, '..', 'build', 'api', 'BrewBar.API.exe');
 }
 
@@ -42,29 +78,22 @@ function startApi() {
     env: {
       ...process.env,
       ASPNETCORE_ENVIRONMENT: 'Desktop',
-      ASPNETCORE_URLS: API_URL,
+      ASPNETCORE_URLS: `http://localhost:${API_PORT}`,
       ConnectionStrings__DefaultConnection: `Data Source=${dbPath}`,
     },
     stdio: 'pipe',
   });
 
-  apiProcess.stdout.on('data', (data) => {
-    console.log(`[API] ${data}`);
-  });
-
-  apiProcess.stderr.on('data', (data) => {
-    console.error(`[API] ${data}`);
-  });
-
-  apiProcess.on('exit', (code) => {
-    console.log(`API process exited with code ${code}`);
-  });
+  apiProcess.stdout.on('data', (data) => console.log(`[API] ${data}`));
+  apiProcess.stderr.on('data', (data) => console.error(`[API] ${data}`));
+  apiProcess.on('exit', (code) => console.log(`API process exited with code ${code}`));
 }
 
 function waitForApi(retries = 30, delay = 1000) {
   return new Promise((resolve, reject) => {
     const attempt = (remaining) => {
-      http
+      const mod = API_URL.startsWith('https') ? https : http;
+      mod
         .get(`${API_URL}/health/ready`, (res) => {
           if (res.statusCode === 200) {
             resolve();
@@ -86,6 +115,8 @@ function waitForApi(retries = 30, delay = 1000) {
   });
 }
 
+// ─── Window ────────────────────────────────────────────────────
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -98,53 +129,88 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
+  mainWindow.webContents.session.clearCache();
   mainWindow.loadURL(API_URL);
+  mainWindow.on('closed', () => { mainWindow = null; });
+}
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+// ─── First-launch helpers (standalone only) ────────────────────
+
+function httpRequest(url, options, body) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? https : http;
+    const req = mod.request(url, options, (res) => {
+      let data = '';
+      res.on('data', (d) => (data += d));
+      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+    });
+    req.on('error', reject);
+    if (body) req.end(body);
+    else req.end();
   });
 }
 
-/**
- * Auto-import menu file if one was provided during installation.
- * The WiX installer copies the user's .xlsx to the API directory as menu-import.xlsx.
- */
+async function getAdminToken() {
+  const loginData = JSON.stringify({ pin: '1234' });
+  const res = await httpRequest(`${API_URL}/api/auth/pin-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  }, loginData);
+  try {
+    return JSON.parse(res.body).token;
+  } catch {
+    return null;
+  }
+}
+
+async function tryApplySettings() {
+  const apiDir = path.dirname(getApiExePath());
+  const settingsFile = path.join(apiDir, 'install-settings.json');
+
+  if (!fs.existsSync(settingsFile)) return;
+  console.log(`[Settings] Found ${settingsFile}, applying...`);
+
+  let settings;
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+  } catch {
+    console.error('[Settings] Failed to parse settings file');
+    return;
+  }
+
+  const token = await getAdminToken();
+  if (!token) { console.error('[Settings] Failed to get auth token'); return; }
+
+  const payload = JSON.stringify({
+    storeName: settings.storeName || 'BrewBar',
+    storeInfo: settings.storeInfo || null,
+    taxRate: parseFloat(settings.taxRate) || 0.0875,
+    currencyCode: settings.currencyCode || 'USD',
+  });
+
+  const res = await httpRequest(`${API_URL}/api/settings`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'Content-Length': Buffer.byteLength(payload),
+    },
+  }, payload);
+
+  console.log(`[Settings] Response (${res.status}): ${res.body}`);
+  fs.unlinkSync(settingsFile);
+}
+
 async function tryMenuImport() {
   const apiDir = path.dirname(getApiExePath());
   const importFile = path.join(apiDir, 'menu-import.xlsx');
 
   if (!fs.existsSync(importFile)) return;
-
   console.log(`[Menu Import] Found ${importFile}, importing...`);
 
-  // First, get an admin token via PIN login
-  const loginData = JSON.stringify({ pin: '1234' });
-  const token = await new Promise((resolve, reject) => {
-    const req = http.request(
-      `${API_URL}/api/auth/pin-login`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' } },
-      (res) => {
-        let body = '';
-        res.on('data', (d) => (body += d));
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(body).token);
-          } catch {
-            reject(new Error('Failed to parse login response'));
-          }
-        });
-      },
-    );
-    req.on('error', reject);
-    req.end(loginData);
-  });
+  const token = await getAdminToken();
+  if (!token) { console.error('[Menu Import] Failed to get auth token'); return; }
 
-  if (!token) {
-    console.error('[Menu Import] Failed to get auth token');
-    return;
-  }
-
-  // Upload the file via multipart form data
   const fileData = fs.readFileSync(importFile);
   const boundary = '----BrewBarMenuImport' + Date.now();
   const payload = Buffer.concat([
@@ -155,46 +221,46 @@ async function tryMenuImport() {
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
 
-  const result = await new Promise((resolve, reject) => {
-    const req = http.request(
-      `${API_URL}/api/menu-import`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': `multipart/form-data; boundary=${boundary}`,
-          Authorization: `Bearer ${token}`,
-          'Content-Length': payload.length,
-        },
-      },
-      (res) => {
-        let body = '';
-        res.on('data', (d) => (body += d));
-        res.on('end', () => {
-          console.log(`[Menu Import] Response (${res.statusCode}): ${body}`);
-          resolve(res.statusCode === 200);
-        });
-      },
-    );
-    req.on('error', reject);
-    req.end(payload);
-  });
+  const res = await httpRequest(`${API_URL}/api/menu-import`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      Authorization: `Bearer ${token}`,
+      'Content-Length': payload.length,
+    },
+  }, payload);
 
-  if (result) {
+  console.log(`[Menu Import] Response (${res.status}): ${res.body}`);
+  if (res.status === 200) {
     fs.unlinkSync(importFile);
     console.log('[Menu Import] Import complete, file removed');
   }
 }
 
+// ─── App lifecycle ─────────────────────────────────────────────
+
 app.on('ready', async () => {
-  startApi();
-  try {
-    await waitForApi();
-    await tryMenuImport();
-    createWindow();
-  } catch (err) {
-    console.error('Failed to start API:', err);
-    app.quit();
+  if (MODE === 'standalone') {
+    startApi();
+    try {
+      await waitForApi();
+      await tryApplySettings();
+      await tryMenuImport();
+    } catch (err) {
+      console.error('Failed to start local API:', err);
+      app.quit();
+      return;
+    }
+  } else if (MODE === 'terminal') {
+    // Terminal mode: just verify the remote API is reachable
+    try {
+      await waitForApi(10, 2000);
+    } catch {
+      console.warn('[Terminal] Remote API not reachable, starting anyway (offline mode will queue orders)');
+    }
   }
+
+  createWindow();
 });
 
 app.on('window-all-closed', () => {

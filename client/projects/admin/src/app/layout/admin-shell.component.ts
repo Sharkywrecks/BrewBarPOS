@@ -37,6 +37,10 @@ import { AuthService } from 'auth';
             <mat-icon matListItemIcon>receipt_long</mat-icon>
             <span matListItemTitle>Orders</span>
           </a>
+          <a mat-list-item routerLink="/reports" routerLinkActive="active">
+            <mat-icon matListItemIcon>bar_chart</mat-icon>
+            <span matListItemTitle>Reports</span>
+          </a>
         </mat-nav-list>
       </mat-sidenav>
 

@@ -1,14 +1,45 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { CreateOrderDto, CreateOrderLineItemDto, CreateOrderModifierItemDto } from 'api-client';
+import { CartPersistenceService } from 'sync';
 import { CartState, CartLineItem } from './cart.models';
+import { SettingsService } from '../services/settings.service';
 
 @Injectable({ providedIn: 'root' })
 export class CartStore {
+  private readonly settingsService = inject(SettingsService);
+  private readonly persistence = inject(CartPersistenceService);
+
   private readonly state = signal<CartState>({
     lineItems: [],
     notes: null,
-    taxRate: 0.0875,
+    taxRate: this.settingsService.taxRate,
   });
+
+  constructor() {
+    // Auto-save cart to IndexedDB on every change
+    effect(() => {
+      const s = this.state();
+      if (s.lineItems.length > 0) {
+        this.persistence.save(JSON.stringify(s));
+      } else {
+        this.persistence.clear();
+      }
+    });
+
+    // Restore saved cart on startup
+    this.persistence.load().then((saved) => {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as CartState;
+          if (parsed.lineItems?.length > 0) {
+            this.state.set(parsed);
+          }
+        } catch {
+          /* ignore corrupt data */
+        }
+      }
+    });
+  }
 
   readonly lineItems = computed(() => this.state().lineItems);
   readonly notes = computed(() => this.state().notes);
@@ -61,6 +92,7 @@ export class CartStore {
 
   clear(): void {
     this.state.set({ lineItems: [], notes: null, taxRate: this.state().taxRate });
+    this.persistence.clear();
   }
 
   toCreateOrderDto(): CreateOrderDto {

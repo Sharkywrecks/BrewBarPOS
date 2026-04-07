@@ -1,3 +1,4 @@
+using BrewBar.Core.Entities;
 using BrewBar.Core.Entities.CatalogAggregate;
 using BrewBar.Core.Entities.OrderAggregate;
 using BrewBar.Core.Entities.PaymentAggregate;
@@ -23,6 +24,7 @@ public class BrewBarContext : DbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Terminal> Terminals => Set<Terminal>();
     public DbSet<SyncOutboxEntry> SyncOutboxEntries => Set<SyncOutboxEntry>();
+    public DbSet<BusinessSettings> BusinessSettings => Set<BusinessSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

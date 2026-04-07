@@ -58,6 +58,7 @@ export interface IClient {
   payments_CreatePayment(dto: CreatePaymentDto): Observable<PaymentDto>;
   payments_GetPayment(id: number): Observable<PaymentDto>;
   payments_GetPaymentsByOrder(orderId: number): Observable<PaymentDto[]>;
+  payments_RefundPayment(id: number): Observable<PaymentDto>;
   products_GetProducts(
     categoryId?: number | null | undefined,
     availableOnly?: boolean | undefined,
@@ -80,13 +81,29 @@ export interface IClient {
   products_DeleteVariant(productId: number, variantId: number): Observable<FileResponse>;
   products_AssignModifier(productId: number, modifierId: number): Observable<FileResponse>;
   products_RemoveModifier(productId: number, modifierId: number): Observable<FileResponse>;
+  reports_GetDailyReport(date?: Date | null | undefined): Observable<DailySalesReportDto>;
+  reports_GetSalesRange(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<SalesRangeReportDto>;
+  reports_GetProductPerformance(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+    limit?: number | undefined,
+  ): Observable<ProductPerformanceDto[]>;
+  reports_GetPaymentSummary(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<PaymentSummaryReportDto>;
+  settings_GetSettings(): Observable<BusinessSettingsDto>;
+  settings_UpdateSettings(dto: UpdateBusinessSettingsDto): Observable<BusinessSettingsDto>;
 }
 
 @Injectable()
 export class Client implements IClient {
   private http: HttpClient;
   private baseUrl: string;
-  protected jsonParseReviver: (key: string, value: any) => any = undefined;
+  protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
   constructor(
     @Inject(HttpClient) http: HttpClient,
@@ -2650,6 +2667,91 @@ export class Client implements IClient {
     return _observableOf(null as any);
   }
 
+  payments_RefundPayment(id: number): Observable<PaymentDto> {
+    let url_ = this.baseUrl + '/api/Payments/{id}/refund';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPayments_RefundPayment(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPayments_RefundPayment(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PaymentDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PaymentDto>;
+        }),
+      );
+  }
+
+  protected processPayments_RefundPayment(response: HttpResponseBase): Observable<PaymentDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PaymentDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PaymentDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
   products_GetProducts(
     categoryId?: number | null | undefined,
     availableOnly?: boolean | undefined,
@@ -3595,6 +3697,552 @@ export class Client implements IClient {
     }
     return _observableOf(null as any);
   }
+
+  reports_GetDailyReport(date?: Date | null | undefined): Observable<DailySalesReportDto> {
+    let url_ = this.baseUrl + '/api/Reports/daily?';
+    if (date !== undefined && date !== null)
+      url_ += 'date=' + encodeURIComponent(date ? '' + date.toISOString() : '') + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processReports_GetDailyReport(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processReports_GetDailyReport(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<DailySalesReportDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<DailySalesReportDto>;
+        }),
+      );
+  }
+
+  protected processReports_GetDailyReport(
+    response: HttpResponseBase,
+  ): Observable<DailySalesReportDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as DailySalesReportDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as DailySalesReportDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  reports_GetSalesRange(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<SalesRangeReportDto> {
+    let url_ = this.baseUrl + '/api/Reports/sales?';
+    if (from !== undefined && from !== null)
+      url_ += 'from=' + encodeURIComponent(from ? '' + from.toISOString() : '') + '&';
+    if (to !== undefined && to !== null)
+      url_ += 'to=' + encodeURIComponent(to ? '' + to.toISOString() : '') + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processReports_GetSalesRange(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processReports_GetSalesRange(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<SalesRangeReportDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<SalesRangeReportDto>;
+        }),
+      );
+  }
+
+  protected processReports_GetSalesRange(
+    response: HttpResponseBase,
+  ): Observable<SalesRangeReportDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as SalesRangeReportDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as SalesRangeReportDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  reports_GetProductPerformance(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+    limit?: number | undefined,
+  ): Observable<ProductPerformanceDto[]> {
+    let url_ = this.baseUrl + '/api/Reports/products?';
+    if (from !== undefined && from !== null)
+      url_ += 'from=' + encodeURIComponent(from ? '' + from.toISOString() : '') + '&';
+    if (to !== undefined && to !== null)
+      url_ += 'to=' + encodeURIComponent(to ? '' + to.toISOString() : '') + '&';
+    if (limit === null) throw new Error("The parameter 'limit' cannot be null.");
+    else if (limit !== undefined) url_ += 'limit=' + encodeURIComponent('' + limit) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processReports_GetProductPerformance(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processReports_GetProductPerformance(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<ProductPerformanceDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<ProductPerformanceDto[]>;
+        }),
+      );
+  }
+
+  protected processReports_GetProductPerformance(
+    response: HttpResponseBase,
+  ): Observable<ProductPerformanceDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as ProductPerformanceDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(
+                _responseText,
+                this.jsonParseReviver,
+              ) as ProductPerformanceDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  reports_GetPaymentSummary(
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<PaymentSummaryReportDto> {
+    let url_ = this.baseUrl + '/api/Reports/payments?';
+    if (from !== undefined && from !== null)
+      url_ += 'from=' + encodeURIComponent(from ? '' + from.toISOString() : '') + '&';
+    if (to !== undefined && to !== null)
+      url_ += 'to=' + encodeURIComponent(to ? '' + to.toISOString() : '') + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processReports_GetPaymentSummary(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processReports_GetPaymentSummary(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PaymentSummaryReportDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PaymentSummaryReportDto>;
+        }),
+      );
+  }
+
+  protected processReports_GetPaymentSummary(
+    response: HttpResponseBase,
+  ): Observable<PaymentSummaryReportDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PaymentSummaryReportDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(
+                _responseText,
+                this.jsonParseReviver,
+              ) as PaymentSummaryReportDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  settings_GetSettings(): Observable<BusinessSettingsDto> {
+    let url_ = this.baseUrl + '/api/Settings';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSettings_GetSettings(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSettings_GetSettings(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<BusinessSettingsDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<BusinessSettingsDto>;
+        }),
+      );
+  }
+
+  protected processSettings_GetSettings(
+    response: HttpResponseBase,
+  ): Observable<BusinessSettingsDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as BusinessSettingsDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as BusinessSettingsDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  settings_UpdateSettings(dto: UpdateBusinessSettingsDto): Observable<BusinessSettingsDto> {
+    let url_ = this.baseUrl + '/api/Settings';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(dto);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('put', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSettings_UpdateSettings(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSettings_UpdateSettings(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<BusinessSettingsDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<BusinessSettingsDto>;
+        }),
+      );
+  }
+
+  protected processSettings_UpdateSettings(
+    response: HttpResponseBase,
+  ): Observable<BusinessSettingsDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as BusinessSettingsDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as BusinessSettingsDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
 }
 
 export interface UserDto {
@@ -3882,6 +4530,75 @@ export interface UpdateProductVariantDto {
   isAvailable?: boolean;
 }
 
+export interface DailySalesReportDto {
+  date?: Date;
+  orderCount?: number;
+  voidedCount?: number;
+  itemsSold?: number;
+  grossSales?: number;
+  taxCollected?: number;
+  netSales?: number;
+  cashTotal?: number;
+  cardTotal?: number;
+  averageOrderValue?: number;
+  hourlySales?: HourlySalesDto[];
+}
+
+export interface HourlySalesDto {
+  hour?: number;
+  orderCount?: number;
+  total?: number;
+}
+
+export interface SalesRangeReportDto {
+  from?: Date;
+  to?: Date;
+  totalOrders?: number;
+  grossSales?: number;
+  taxCollected?: number;
+  netSales?: number;
+  dailyBreakdown?: DailySalesPointDto[];
+}
+
+export interface DailySalesPointDto {
+  date?: Date;
+  orderCount?: number;
+  total?: number;
+}
+
+export interface ProductPerformanceDto {
+  productId?: number;
+  productName?: string;
+  categoryName?: string;
+  unitsSold?: number;
+  revenue?: number;
+}
+
+export interface PaymentSummaryReportDto {
+  from?: Date;
+  to?: Date;
+  cashTotal?: number;
+  cashCount?: number;
+  cardTotal?: number;
+  cardCount?: number;
+  refundTotal?: number;
+  refundCount?: number;
+}
+
+export interface BusinessSettingsDto {
+  storeName?: string;
+  storeInfo?: string | null;
+  taxRate?: number;
+  currencyCode?: string;
+}
+
+export interface UpdateBusinessSettingsDto {
+  storeName?: string;
+  storeInfo?: string | null;
+  taxRate?: number;
+  currencyCode?: string;
+}
+
 export interface FileParameter {
   data: any;
   fileName: string;
@@ -3895,7 +4612,7 @@ export interface FileResponse {
 }
 
 export class ApiException extends Error {
-  message: string;
+  override message: string;
   status: number;
   response: string;
   headers: { [key: string]: any };
@@ -3950,18 +4667,10 @@ function blobToText(blob: any): Observable<string> {
         return;
       }
 
-      if (typeof Buffer !== 'undefined' && Buffer.isBuffer(blob)) {
-        observer.next(blob.toString('utf8'));
-        observer.complete();
-        return;
-      }
-
-      // <-- FIXED SECTION -->
       if (blob instanceof ArrayBuffer || ArrayBuffer.isView(blob)) {
         const bytes = blob instanceof Uint8Array ? blob : new Uint8Array(blob as ArrayBufferLike);
 
-        const decoder = getTextDecoder();
-        observer.next(decoder.decode(bytes));
+        observer.next(new TextDecoder().decode(bytes));
         observer.complete();
         return;
       }
@@ -3984,14 +4693,4 @@ function blobToText(blob: any): Observable<string> {
       observer.complete();
     }
   });
-}
-
-function getTextDecoder(): TextDecoder {
-  if (typeof TextDecoder !== 'undefined') {
-    return new TextDecoder();
-  }
-
-  // Node fallback
-  const { TextDecoder: NodeTextDecoder } = require('util');
-  return new NodeTextDecoder('utf-8');
 }

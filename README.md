@@ -14,15 +14,37 @@ Most POS systems are cloud-locked SaaS products with per-terminal fees. BrewBar 
 
 ## Features
 
-- Touch-friendly POS register with category-filtered product grid
+### POS Terminal
+- Touch-friendly register with category-filtered product grid
 - Product variants (sizes) and modifiers (add-ons) with pricing
 - Cash and card payment recording with change calculation
 - Receipt printing via USB thermal printers (ESC/POS over WebUSB)
-- Cash drawer kick support
-- Admin dashboard for menu management and order history
-- Role-based access — Admin, Manager, Cashier
+- Automatic cash drawer kick on cash payments
+- Order history with receipt reprinting
 - Fast PIN-based cashier login
+
+### Admin Dashboard
+- Catalog management — categories, products, variants, modifiers
+- Order management — search, filter, void, and refund
+- Sales reporting — daily KPIs, hourly trends, top products, payment breakdown
+- Business settings — store name, tax rate
+
+### Offline & Sync
+- Orders queue locally (IndexedDB) when the API is unreachable
+- Background sync engine retries automatically with idempotent order creation
+- Cart persists to IndexedDB — survives page refreshes and app crashes
+
+### Deployment Modes
+- **Standalone** — single-machine install with embedded API + SQLite
+- **Terminal** — Electron frontend connecting to a remote BrewBar server
+- **Cloud** — deploy the API via Docker, access via any browser
+
+### Infrastructure
+- Role-based access — Admin, Manager, Cashier
 - Multi-terminal support
+- Menu import from Excel (.xlsx) during installation or via admin
+- Configurable store name and tax rate (set during install)
+- Rate-limited API with structured error handling
 - Automatic database seeding with sample menu on first run
 
 ## Quick Start

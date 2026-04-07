@@ -9,8 +9,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { PaymentMethod, CreatePaymentDto } from 'api-client';
+import { PrinterService, CashDrawerService, buildReceipt, ReceiptData } from 'printing';
+import { AuthService } from 'auth';
 import { CartStore } from '../store/cart.store';
 import { OrderService } from '../services/order.service';
+import { SettingsService } from '../services/settings.service';
 
 @Component({
   selector: 'app-checkout-page',
@@ -269,6 +272,10 @@ export class CheckoutPage {
   private readonly orderService = inject(OrderService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly printer = inject(PrinterService);
+  private readonly cashDrawer = inject(CashDrawerService);
+  private readonly auth = inject(AuthService);
+  private readonly settings = inject(SettingsService);
 
   protected readonly PaymentMethod = PaymentMethod;
   protected readonly paymentMethod = signal<PaymentMethod>(PaymentMethod.Cash);
@@ -336,29 +343,85 @@ export class CheckoutPage {
       const orderDto = this.cart.toCreateOrderDto();
       const order = await this.orderService.createOrder(orderDto);
 
+      const isCash = this.paymentMethod() === PaymentMethod.Cash;
+      const amountTendered = isCash ? this.cashAmount() : this.cart.total();
+      const changeGiven = isCash ? this.change() : 0;
+
       const paymentDto: CreatePaymentDto = {
         orderId: order.id!,
         method: this.paymentMethod(),
-        amountTendered:
-          this.paymentMethod() === PaymentMethod.Cash ? this.cashAmount() : this.cart.total(),
+        amountTendered,
         total: this.cart.total(),
       };
 
       await this.orderService.createPayment(paymentDto);
 
+      // Build receipt data before clearing cart
+      const receiptData: ReceiptData = {
+        storeName: this.settings.storeName,
+        orderNumber: order.displayOrderNumber!,
+        cashierName: this.auth.currentUser()?.displayName ?? undefined,
+        lineItems: this.cart.lineItems().map((li) => ({
+          name: li.productName,
+          variant: li.variantName ?? undefined,
+          quantity: li.quantity,
+          unitPrice: li.unitPrice,
+          lineTotal: this.lineTotal(li),
+          modifiers: li.modifierItems.map((m) => ({ name: m.optionName, price: m.price })),
+        })),
+        subtotal: this.cart.subtotal(),
+        taxRate: order.taxRate!,
+        taxAmount: this.cart.taxAmount(),
+        total: this.cart.total(),
+        paymentMethod: isCash ? 'Cash' : 'Card',
+        amountTendered,
+        changeGiven,
+        dateTime: new Date(),
+      };
+
+      const isOffline = this.orderService.wasOffline;
+      const displayTotal = isOffline ? this.cart.total() : order.total!;
+
       this.cart.clear();
+
+      // Print receipt and open cash drawer (non-blocking — don't fail the order)
+      if (!isOffline) {
+        this.printAndKick(receiptData, isCash);
+      }
 
       this.router.navigate(['/order-complete'], {
         state: {
           orderNumber: order.displayOrderNumber,
-          total: order.total,
+          total: displayTotal,
           paymentMethod: this.paymentMethod(),
-          change: this.paymentMethod() === PaymentMethod.Cash ? this.change() : 0,
+          change: changeGiven,
+          offline: isOffline,
         },
       });
-    } catch (err) {
-      this.snackBar.open('Payment failed. Please try again.', 'Dismiss', { duration: 5000 });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'status' in err
+            ? `Server error (${(err as { status: number }).status})`
+            : 'Payment failed. Please try again.';
+      this.snackBar.open(message, 'Dismiss', { duration: 5000 });
       this.submitting.set(false);
+    }
+  }
+
+  private async printAndKick(receipt: ReceiptData, openDrawer: boolean): Promise<void> {
+    try {
+      if (this.printer.isConnected) {
+        const bytes = buildReceipt(receipt);
+        await this.printer.print(bytes);
+        if (openDrawer) {
+          await this.cashDrawer.kick();
+        }
+      }
+    } catch {
+      // Printing failures should not block the order flow
+      this.snackBar.open('Receipt printing failed.', 'Dismiss', { duration: 3000 });
     }
   }
 }

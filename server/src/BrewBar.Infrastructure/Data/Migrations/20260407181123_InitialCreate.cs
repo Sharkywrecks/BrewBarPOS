@@ -12,6 +12,24 @@ namespace BrewBar.Infrastructure.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "BusinessSettings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    StoreName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    StoreInfo = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
+                    TaxRate = table.Column<decimal>(type: "TEXT", precision: 5, scale: 4, nullable: false),
+                    CurrencyCode = table.Column<string>(type: "TEXT", maxLength: 3, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BusinessSettings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Categories",
                 columns: table => new
                 {
@@ -332,6 +350,9 @@ namespace BrewBar.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "BusinessSettings");
+
             migrationBuilder.DropTable(
                 name: "ModifierOptions");
 
