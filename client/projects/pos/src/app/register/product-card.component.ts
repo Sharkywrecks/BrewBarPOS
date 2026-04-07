@@ -1,0 +1,75 @@
+import { Component, input, output } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
+import { MatRippleModule } from '@angular/material/core';
+import { CurrencyPipe } from '@angular/common';
+import { ProductDto } from 'api-client';
+
+@Component({
+  selector: 'app-product-card',
+  standalone: true,
+  imports: [MatCardModule, MatRippleModule, CurrencyPipe],
+  template: `
+    <mat-card
+      class="product-card"
+      [class.unavailable]="!product().isAvailable"
+      matRipple
+      (click)="onTap()"
+    >
+      <mat-card-content>
+        <div class="product-name">{{ product().name }}</div>
+        <div class="product-price">{{ product().basePrice | currency }}</div>
+        @if (product().variants && product().variants!.length > 0) {
+          <div class="variant-hint">{{ product().variants!.length }} sizes</div>
+        }
+      </mat-card-content>
+    </mat-card>
+  `,
+  styles: [
+    `
+      .product-card {
+        cursor: pointer;
+        height: 100%;
+        min-height: 96px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        transition: box-shadow 0.2s;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .product-card:active {
+        box-shadow: none;
+      }
+      .product-card.unavailable {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .product-name {
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.3;
+      }
+      .product-price {
+        font-size: 13px;
+        opacity: 0.7;
+        margin-top: 4px;
+      }
+      .variant-hint {
+        font-size: 11px;
+        opacity: 0.5;
+        margin-top: 2px;
+      }
+    `,
+  ],
+})
+export class ProductCardComponent {
+  readonly product = input.required<ProductDto>();
+  readonly tap = output<ProductDto>();
+
+  onTap(): void {
+    if (this.product().isAvailable) {
+      this.tap.emit(this.product());
+    }
+  }
+}

@@ -1,0 +1,72 @@
+# OTHERS
+.mcp.json
+CLAUDE.md
+copilot-instructions.md
+.claude/
+
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.nupkg
+*.snupkg
+**/Properties/launchSettings.json
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+## Node / Angular
+node_modules/
+dist/
+.angular/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## Environment
+.env
+.env.*
+!.env.template
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+!appsettings.Desktop.json
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Docker
+docker-compose.override.yml
+
+## Test Results
+TestResults/
+coverage/
+*.trx
+
+## Desktop build output
+build/
+*.msi
+*.db
+
+## Misc
+*.log

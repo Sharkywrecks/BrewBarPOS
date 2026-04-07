@@ -1,0 +1,52 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  // Prevent text selection on touch (POS kiosk)
+  -webkit-user-select: none;
+  user-select: none;
+  // Prevent pull-to-refresh and overscroll
+  overscroll-behavior: none;
+}
+
+// POS touch-friendly overrides
+// Ensure tap targets are at least 48px (Material touch guidelines)
+.mat-mdc-button,
+.mat-mdc-icon-button,
+.mat-mdc-fab,
+.mat-mdc-mini-fab {
+  -webkit-tap-highlight-color: transparent;
+}
+
+// Allow text selection in input fields
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+// Modifier bottom sheet panel
+.modifier-sheet-panel {
+  max-height: 85vh !important;
+}

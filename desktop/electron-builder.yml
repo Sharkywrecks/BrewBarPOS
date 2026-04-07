@@ -1,0 +1,25 @@
+appId: com.brewbar.pos
+productName: BrewBar POS
+copyright: Copyright (c) 2026 BrewBar
+
+directories:
+  output: ../build/electron
+
+files:
+  - main.js
+  - package.json
+  - node_modules/tree-kill/**
+
+extraResources:
+  - from: ../build/api
+    to: api
+    filter:
+      - "**/*"
+
+win:
+  target: dir
+  signAndEditExecutable: false
+
+asar: true
+asarUnpack:
+  - "**/*.node"

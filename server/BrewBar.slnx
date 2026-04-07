@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BrewBar.API/BrewBar.API.csproj" />
+    <Project Path="src/BrewBar.Core/BrewBar.Core.csproj" />
+    <Project Path="src/BrewBar.Infrastructure/BrewBar.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BrewBar.Tests.Integration/BrewBar.Tests.Integration.csproj" />
+    <Project Path="tests/BrewBar.Tests.Unit/BrewBar.Tests.Unit.csproj" />
+  </Folder>
+</Solution>

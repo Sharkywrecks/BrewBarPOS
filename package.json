@@ -1,0 +1,34 @@
+{
+  "name": "brewbar-pos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BrewBar POS — juice bar point-of-sale system",
+  "scripts": {
+    "install:client": "cd client && npm ci",
+    "install:desktop": "cd desktop && npm ci",
+    "install:all": "npm run install:client && npm run install:desktop",
+    "build:api": "dotnet publish server/src/BrewBar.API/BrewBar.API.csproj -p:PublishProfile=Desktop -c Release",
+    "build:pos": "cd client && npx ng build pos --configuration production",
+    "build:admin": "cd client && npx ng build admin --configuration production --base-href /admin/",
+    "build:client": "npm run build:pos && npm run build:admin",
+    "build:copy-wwwroot": "node scripts/copy-wwwroot.js",
+    "build:electron": "cd desktop && npm install && npx electron-builder --win --config electron-builder.yml",
+    "build:msi": "node -e \"const v=require('./package.json').version; const {execSync}=require('child_process'); execSync(`dotnet build installer/BrewBar.Installer.wixproj -c Release -p:ProductVersion=${v}.0`,{stdio:'inherit'})\"",
+    "build:desktop": "npm run build:api && npm run build:client && npm run build:copy-wwwroot && npm run build:electron",
+    "build:installer": "npm run build:desktop && npm run build:msi",
+    "clean": "node -e \"fs.rmSync('build',{recursive:true,force:true})\"",
+    "dev:api": "cd server/src/BrewBar.API && dotnet run",
+    "dev:api:sqlite": "cd server/src/BrewBar.API && dotnet run --environment Desktop",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "client/**/*.ts": "prettier --write",
+    "client/**/*.html": "prettier --write",
+    "client/**/*.scss": "prettier --write"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1"
+  }
+}

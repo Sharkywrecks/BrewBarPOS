@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <ThresholdType>line</ThresholdType>
+          <ThresholdStat>total</ThresholdStat>
+          <!-- Start with 50% minimum, increase as coverage improves -->
+          <Threshold>50</Threshold>
+          <Exclude>
+            [*]BrewBar.Infrastructure.Data.Migrations.*,
+            [*]BrewBar.Infrastructure.Data.Seed.*,
+            [*]BrewBar.API.Errors.*
+          </Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
