@@ -11,5 +11,6 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.AmountTendered).HasPrecision(10, 2);
         builder.Property(p => p.ChangeGiven).HasPrecision(10, 2);
         builder.Property(p => p.Total).HasPrecision(10, 2);
+        builder.Property(p => p.TipAmount).HasPrecision(10, 2);
     }
 }

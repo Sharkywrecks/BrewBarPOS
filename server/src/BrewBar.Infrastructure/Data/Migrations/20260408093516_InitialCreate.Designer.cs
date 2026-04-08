@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BrewBar.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(BrewBarContext))]
-    [Migration("20260407181123_InitialCreate")]
+    [Migration("20260408093516_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -29,9 +29,13 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CurrencyCode")
+                    b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("DiscountApprovalThreshold")
+                        .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StoreInfo")
@@ -154,6 +158,10 @@ namespace BrewBar.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("BasePrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
@@ -177,15 +185,29 @@ namespace BrewBar.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Sku")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Barcode")
+                        .IsUnique();
+
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("Sku")
+                        .IsUnique();
 
                     b.ToTable("Products");
                 });
@@ -279,6 +301,23 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("OrderDiscountAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("OrderDiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OrderDiscountReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("OrderDiscountType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RegisterShiftId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -304,6 +343,18 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("VoidReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("VoidedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VoidedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VoidedByUserName")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LocalId")
@@ -321,6 +372,20 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DiscountReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DiscountType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("LineTotal")
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
@@ -337,6 +402,14 @@ namespace BrewBar.Infrastructure.Data.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(10, 2)
@@ -415,6 +488,10 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("TipAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("Total")
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
@@ -425,6 +502,170 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.PaymentAggregate.Refund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsFullRefund")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OriginalPaymentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PerformedByUserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformedByUserName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Refunds");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.PaymentAggregate.RefundLineItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OrderLineItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RefundId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RefundId");
+
+                    b.ToTable("RefundLineItems");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.ShiftAggregate.CashDrop", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformedByUserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PerformedByUserName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RegisterShiftId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RegisterShiftId");
+
+                    b.ToTable("CashDrops");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.ShiftAggregate.RegisterShift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("CashOverShort")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CashierName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CloseNotes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ClosingCashAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("ExpectedCashAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OpenedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("OpeningCashAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TerminalId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RegisterShifts");
                 });
 
             modelBuilder.Entity("BrewBar.Core.Entities.SyncAggregate.SyncOutboxEntry", b =>
@@ -575,6 +816,28 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     b.Navigation("OrderLineItem");
                 });
 
+            modelBuilder.Entity("BrewBar.Core.Entities.PaymentAggregate.RefundLineItem", b =>
+                {
+                    b.HasOne("BrewBar.Core.Entities.PaymentAggregate.Refund", "Refund")
+                        .WithMany("LineItems")
+                        .HasForeignKey("RefundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Refund");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.ShiftAggregate.CashDrop", b =>
+                {
+                    b.HasOne("BrewBar.Core.Entities.ShiftAggregate.RegisterShift", "RegisterShift")
+                        .WithMany("CashDrops")
+                        .HasForeignKey("RegisterShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RegisterShift");
+                });
+
             modelBuilder.Entity("BrewBar.Core.Entities.CatalogAggregate.Category", b =>
                 {
                     b.Navigation("Products");
@@ -602,6 +865,16 @@ namespace BrewBar.Infrastructure.Data.Migrations
             modelBuilder.Entity("BrewBar.Core.Entities.OrderAggregate.OrderLineItem", b =>
                 {
                     b.Navigation("ModifierItems");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.PaymentAggregate.Refund", b =>
+                {
+                    b.Navigation("LineItems");
+                });
+
+            modelBuilder.Entity("BrewBar.Core.Entities.ShiftAggregate.RegisterShift", b =>
+                {
+                    b.Navigation("CashDrops");
                 });
 #pragma warning restore 612, 618
         }

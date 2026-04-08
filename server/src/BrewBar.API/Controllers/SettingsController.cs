@@ -1,4 +1,5 @@
 using BrewBar.Core.Entities;
+using BrewBar.Core.Enums;
 using BrewBar.Core.Interfaces;
 using BrewBar.Core.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,7 @@ public class SettingsController : BaseApiController
     public async Task<ActionResult<BusinessSettingsDto>> GetSettings(CancellationToken ct)
     {
         var settings = await _unitOfWork.GetQueryable<BusinessSettings>()
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(ct);
 
         if (settings == null)
@@ -46,6 +48,7 @@ public class SettingsController : BaseApiController
         UpdateBusinessSettingsDto dto, CancellationToken ct)
     {
         var settings = await _unitOfWork.GetQueryable<BusinessSettings>()
+            .OrderBy(s => s.Id)
             .FirstOrDefaultAsync(ct);
 
         if (settings == null)
@@ -57,7 +60,8 @@ public class SettingsController : BaseApiController
         settings.StoreName = dto.StoreName;
         settings.StoreInfo = dto.StoreInfo;
         settings.TaxRate = dto.TaxRate;
-        settings.CurrencyCode = dto.CurrencyCode;
+        settings.Currency = dto.Currency;
+        settings.DiscountApprovalThreshold = dto.DiscountApprovalThreshold;
 
         await _unitOfWork.Complete(ct);
         return Ok(MapDto(settings));
@@ -68,7 +72,8 @@ public class SettingsController : BaseApiController
         StoreName = s.StoreName,
         StoreInfo = s.StoreInfo,
         TaxRate = s.TaxRate,
-        CurrencyCode = s.CurrencyCode,
+        Currency = s.Currency,
+        DiscountApprovalThreshold = s.DiscountApprovalThreshold,
     };
 }
 
@@ -77,7 +82,8 @@ public class BusinessSettingsDto
     public string StoreName { get; set; } = string.Empty;
     public string? StoreInfo { get; set; }
     public decimal TaxRate { get; set; }
-    public string CurrencyCode { get; set; } = string.Empty;
+    public Currency Currency { get; set; }
+    public decimal DiscountApprovalThreshold { get; set; }
 }
 
 public class UpdateBusinessSettingsDto
@@ -85,5 +91,6 @@ public class UpdateBusinessSettingsDto
     public string StoreName { get; set; } = string.Empty;
     public string? StoreInfo { get; set; }
     public decimal TaxRate { get; set; }
-    public string CurrencyCode { get; set; } = string.Empty;
+    public Currency Currency { get; set; }
+    public decimal DiscountApprovalThreshold { get; set; }
 }

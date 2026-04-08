@@ -22,8 +22,8 @@ import {
 
 describe('ESC/POS Commands', () => {
   describe('initialize', () => {
-    it('should return ESC @ (0x1B 0x40)', () => {
-      expect(Array.from(initialize())).toEqual([0x1b, 0x40]);
+    it('should return ESC @ then ESC t 16 (reset + select CP1252)', () => {
+      expect(Array.from(initialize())).toEqual([0x1b, 0x40, 0x1b, 0x74, 16]);
     });
   });
 
@@ -91,9 +91,24 @@ describe('ESC/POS Commands', () => {
       expect(Array.from(result)).toEqual([0x48, 0x69]);
     });
 
-    it('should replace non-ASCII with ?', () => {
+    it('should encode Latin-1 characters (é = 0xE9 in CP1252)', () => {
       const result = encodeText('café');
-      expect(result[3]).toBe(0x3f); // é → ?
+      expect(result[3]).toBe(0xe9); // é is 0xE9 in CP1252/Latin-1
+    });
+
+    it('should encode € as 0x80 in CP1252', () => {
+      const result = encodeText('€');
+      expect(result[0]).toBe(0x80);
+    });
+
+    it('should encode £ as 0xA3 in CP1252', () => {
+      const result = encodeText('£');
+      expect(result[0]).toBe(0xa3);
+    });
+
+    it('should replace unmapped Unicode with ?', () => {
+      const result = encodeText('\u4e2d'); // Chinese character
+      expect(result[0]).toBe(0x3f);
     });
   });
 

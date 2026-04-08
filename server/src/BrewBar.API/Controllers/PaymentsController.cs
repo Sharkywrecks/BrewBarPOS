@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BrewBar.API.Dtos.Orders;
 using BrewBar.API.Errors;
 using BrewBar.Core.Entities.OrderAggregate;
@@ -30,7 +31,7 @@ public class PaymentsController : BaseApiController
         if (order.Status == OrderStatus.Completed) return BadRequest(new ApiResponse(400, "Order is already completed"));
 
         var changeGiven = dto.Method == PaymentMethod.Cash
-            ? Math.Max(dto.AmountTendered - dto.Total, 0)
+            ? Math.Max(dto.AmountTendered - dto.Total - dto.TipAmount, 0)
             : 0m;
 
         var payment = new Payment
@@ -40,7 +41,8 @@ public class PaymentsController : BaseApiController
             Status = PaymentStatus.Completed,
             AmountTendered = dto.AmountTendered,
             ChangeGiven = changeGiven,
-            Total = dto.Total
+            Total = dto.Total,
+            TipAmount = dto.TipAmount
         };
 
         _unitOfWork.Repository<Payment>().Add(payment);
@@ -66,6 +68,7 @@ public class PaymentsController : BaseApiController
             AmountTendered = payment.AmountTendered,
             ChangeGiven = payment.ChangeGiven,
             Total = payment.Total,
+            TipAmount = payment.TipAmount,
             CreatedAtUtc = payment.CreatedAtUtc
         });
     }
@@ -85,6 +88,7 @@ public class PaymentsController : BaseApiController
             AmountTendered = payment.AmountTendered,
             ChangeGiven = payment.ChangeGiven,
             Total = payment.Total,
+            TipAmount = payment.TipAmount,
             CreatedAtUtc = payment.CreatedAtUtc
         });
     }
@@ -106,49 +110,125 @@ public class PaymentsController : BaseApiController
             AmountTendered = p.AmountTendered,
             ChangeGiven = p.ChangeGiven,
             Total = p.Total,
+            TipAmount = p.TipAmount,
             CreatedAtUtc = p.CreatedAtUtc
         }).ToList());
     }
 
-    [HttpPost("{id}/refund")]
+    [HttpPost("refund")]
     [Authorize(Roles = Roles.AdminOrManager)]
-    public async Task<ActionResult<PaymentDto>> RefundPayment(int id, CancellationToken ct)
+    public async Task<ActionResult<RefundDto>> CreateRefund(CreateRefundDto dto, CancellationToken ct)
     {
-        var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(id, ct);
-        if (payment == null) return NotFound(new ApiResponse(404));
+        var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(dto.OriginalPaymentId, ct);
+        if (payment == null) return NotFound(new ApiResponse(404, "Payment not found"));
         if (payment.Status == PaymentStatus.Refunded)
-            return BadRequest(new ApiResponse(400, "Payment is already refunded"));
+            return BadRequest(new ApiResponse(400, "Payment is already fully refunded"));
         if (payment.Status != PaymentStatus.Completed)
             return BadRequest(new ApiResponse(400, "Only completed payments can be refunded"));
 
-        payment.Status = PaymentStatus.Refunded;
+        var order = await _unitOfWork.GetQueryable<Order>()
+            .Include(o => o.LineItems)
+            .FirstOrDefaultAsync(o => o.Id == dto.OrderId, ct);
+        if (order == null) return NotFound(new ApiResponse(404, "Order not found"));
 
-        // Reopen the order if all payments are now refunded
-        var order = await _unitOfWork.Repository<Order>().GetByIdAsync(payment.OrderId, ct);
-        if (order != null)
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var userName = User.FindFirstValue(ClaimTypes.Name);
+
+        decimal refundAmount;
+        var refundLineItems = new List<RefundLineItem>();
+
+        if (dto.IsFullRefund)
         {
-            var remainingCompleted = await _unitOfWork.GetQueryable<Payment>()
-                .Where(p => p.OrderId == payment.OrderId && p.Id != id && p.Status == PaymentStatus.Completed)
-                .SumAsync(p => p.Total, ct);
-
-            if (remainingCompleted < order.Total)
+            refundAmount = payment.Total;
+        }
+        else
+        {
+            // Calculate partial refund from specified line items
+            refundAmount = 0;
+            foreach (var rli in dto.LineItems ?? [])
             {
-                order.Status = OrderStatus.Open;
+                var orderLine = order.LineItems.FirstOrDefault(li => li.Id == rli.OrderLineItemId);
+                if (orderLine == null) continue;
+
+                var perItemAmount = orderLine.LineTotal / orderLine.Quantity;
+                var lineRefund = Math.Round(perItemAmount * rli.Quantity, 2);
+                refundAmount += lineRefund;
+
+                refundLineItems.Add(new RefundLineItem
+                {
+                    OrderLineItemId = rli.OrderLineItemId,
+                    Quantity = rli.Quantity,
+                    Amount = lineRefund
+                });
             }
+        }
+
+        var refund = new Refund
+        {
+            OrderId = dto.OrderId,
+            OriginalPaymentId = dto.OriginalPaymentId,
+            Amount = refundAmount,
+            Reason = dto.Reason,
+            PerformedByUserId = userId,
+            PerformedByUserName = userName,
+            IsFullRefund = dto.IsFullRefund,
+            LineItems = refundLineItems
+        };
+
+        _unitOfWork.Repository<Refund>().Add(refund);
+
+        if (dto.IsFullRefund)
+        {
+            payment.Status = PaymentStatus.Refunded;
+            order.Status = OrderStatus.Refunded;
         }
 
         await _unitOfWork.Complete(ct);
 
-        return Ok(new PaymentDto
+        return Ok(new RefundDto
         {
-            Id = payment.Id,
-            OrderId = payment.OrderId,
-            Method = payment.Method,
-            Status = payment.Status,
-            AmountTendered = payment.AmountTendered,
-            ChangeGiven = payment.ChangeGiven,
-            Total = payment.Total,
-            CreatedAtUtc = payment.CreatedAtUtc
+            Id = refund.Id,
+            OrderId = refund.OrderId,
+            OriginalPaymentId = refund.OriginalPaymentId,
+            Amount = refund.Amount,
+            Reason = refund.Reason,
+            PerformedByUserName = refund.PerformedByUserName,
+            IsFullRefund = refund.IsFullRefund,
+            CreatedAtUtc = refund.CreatedAtUtc,
+            LineItems = refund.LineItems.Select(li => new RefundLineItemDto
+            {
+                OrderLineItemId = li.OrderLineItemId,
+                Quantity = li.Quantity,
+                Amount = li.Amount
+            }).ToList()
         });
+    }
+
+    [HttpGet("refunds/by-order/{orderId}")]
+    public async Task<ActionResult<IReadOnlyList<RefundDto>>> GetRefundsByOrder(int orderId, CancellationToken ct)
+    {
+        var refunds = await _unitOfWork.GetQueryable<Refund>()
+            .Include(r => r.LineItems)
+            .Where(r => r.OrderId == orderId)
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        return Ok(refunds.Select(r => new RefundDto
+        {
+            Id = r.Id,
+            OrderId = r.OrderId,
+            OriginalPaymentId = r.OriginalPaymentId,
+            Amount = r.Amount,
+            Reason = r.Reason,
+            PerformedByUserName = r.PerformedByUserName,
+            IsFullRefund = r.IsFullRefund,
+            CreatedAtUtc = r.CreatedAtUtc,
+            LineItems = r.LineItems.Select(li => new RefundLineItemDto
+            {
+                OrderLineItemId = li.OrderLineItemId,
+                Quantity = li.Quantity,
+                Amount = li.Amount
+            }).ToList()
+        }).ToList());
     }
 }

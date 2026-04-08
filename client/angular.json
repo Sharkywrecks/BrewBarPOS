@@ -52,6 +52,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "integration": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "projects/admin/src/environments/environment.ts",
+                  "with": "projects/admin/src/environments/environment.integration.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -64,6 +75,9 @@
             },
             "development": {
               "buildTarget": "admin:build:development"
+            },
+            "integration": {
+              "buildTarget": "admin:build:integration"
             }
           },
           "defaultConfiguration": "development"
@@ -124,6 +138,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "integration": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "projects/pos/src/environments/environment.ts",
+                  "with": "projects/pos/src/environments/environment.integration.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -136,6 +161,9 @@
             },
             "development": {
               "buildTarget": "pos:build:development"
+            },
+            "integration": {
+              "buildTarget": "pos:build:integration"
             }
           },
           "defaultConfiguration": "development"

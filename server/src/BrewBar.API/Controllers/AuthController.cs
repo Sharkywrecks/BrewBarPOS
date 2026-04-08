@@ -73,6 +73,38 @@ public class AuthController : BaseApiController
         return await CreateUserDto(user, ct);
     }
 
+    /// <summary>
+    /// One-time initial setup: updates the default admin account with custom credentials.
+    /// Only works when the default admin (admin@brewbar.local) still exists.
+    /// </summary>
+    [HttpPost("setup")]
+    [AllowAnonymous]
+    public async Task<ActionResult> InitialSetup(InitialSetupDto dto, CancellationToken ct)
+    {
+        const string defaultEmail = "admin@brewbar.local";
+        var admin = await _userManager.FindByEmailAsync(defaultEmail);
+        if (admin == null)
+            return BadRequest(new ApiResponse(400, "Initial setup already completed"));
+
+        // Update credentials
+        admin.DisplayName = dto.DisplayName;
+        admin.Email = dto.Email;
+        admin.UserName = dto.Email;
+        admin.Pin = dto.Pin;
+
+        var updateResult = await _userManager.UpdateAsync(admin);
+        if (!updateResult.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", updateResult.Errors.Select(e => e.Description))));
+
+        // Change password
+        var token = await _userManager.GeneratePasswordResetTokenAsync(admin);
+        var pwResult = await _userManager.ResetPasswordAsync(admin, token, dto.Password);
+        if (!pwResult.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", pwResult.Errors.Select(e => e.Description))));
+
+        return Ok(new ApiResponse(200, "Admin account configured"));
+    }
+
     [HttpGet("current")]
     [Authorize]
     public async Task<ActionResult<UserDto>> GetCurrentUser(CancellationToken ct)
@@ -82,6 +114,17 @@ public class AuthController : BaseApiController
         if (user == null) return NotFound(new ApiResponse(404));
 
         return await CreateUserDto(user, ct);
+    }
+
+    [HttpGet("staff")]
+    public async Task<ActionResult<IList<StaffDto>>> GetStaff(CancellationToken ct)
+    {
+        var users = await _userManager.Users
+            .Select(u => new StaffDto { Id = u.Id, DisplayName = u.DisplayName })
+            .OrderBy(u => u.DisplayName)
+            .ToListAsync(ct);
+
+        return Ok(users);
     }
 
     [HttpGet("users")]

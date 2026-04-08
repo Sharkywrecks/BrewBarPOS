@@ -4,8 +4,10 @@ import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-s
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CategoryDto, ProductDto } from 'api-client';
+import { CategoryDto, ProductDto, IClient, CLIENT_TOKEN } from 'api-client';
+import { firstValueFrom } from 'rxjs';
 import { MenuService } from '../services/menu.service';
+import { SettingsService } from '../services/settings.service';
 import { CartStore } from '../store/cart.store';
 import { CartLineItem } from '../store/cart.models';
 import { CategoryBarComponent } from './category-bar.component';
@@ -13,6 +15,7 @@ import { ProductGridComponent } from './product-grid.component';
 import { OrderSidebarComponent } from './order-sidebar.component';
 import { ModifierSheetComponent, ModifierSheetData } from './modifier-sheet.component';
 import { OrderNotesDialog, OrderNotesDialogData } from './order-notes.dialog';
+import { BarcodeInputComponent } from './barcode-input.component';
 
 @Component({
   selector: 'app-register-page',
@@ -21,6 +24,7 @@ import { OrderNotesDialog, OrderNotesDialogData } from './order-notes.dialog';
     CategoryBarComponent,
     ProductGridComponent,
     OrderSidebarComponent,
+    BarcodeInputComponent,
     MatBottomSheetModule,
     MatDialogModule,
     MatProgressSpinnerModule,
@@ -34,6 +38,7 @@ import { OrderNotesDialog, OrderNotesDialogData } from './order-notes.dialog';
             <mat-spinner diameter="48"></mat-spinner>
           </div>
         } @else {
+          <app-barcode-input (barcodeScanned)="onBarcodeScanned($event)" />
           <app-category-bar
             [categories]="menu.categories()"
             [selectedIndex]="selectedCategoryIndex()"
@@ -78,10 +83,12 @@ import { OrderNotesDialog, OrderNotesDialogData } from './order-notes.dialog';
 export class RegisterPage implements OnInit {
   protected readonly menu = inject(MenuService);
   private readonly cart = inject(CartStore);
+  private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
   private readonly bottomSheet = inject(MatBottomSheet);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly client = inject<IClient>(CLIENT_TOKEN);
 
   protected readonly selectedCategoryIndex = signal(0);
   protected readonly loadError = signal(false);
@@ -127,6 +134,11 @@ export class RegisterPage implements OnInit {
         variantName: null,
         unitPrice: product.basePrice!,
         quantity: 1,
+        taxRate: product.taxRate ?? this.settingsService.taxRate,
+        discountAmount: 0,
+        discountType: null,
+        discountPercent: null,
+        discountReason: null,
         modifierItems: [],
       };
       this.cart.addItem(item);
@@ -161,6 +173,17 @@ export class RegisterPage implements OnInit {
         this.cart.updateNotes(result);
       }
     });
+  }
+
+  async onBarcodeScanned(barcode: string): Promise<void> {
+    try {
+      const product = await firstValueFrom(this.client.products_LookupProduct(barcode, undefined));
+      if (product) {
+        this.onProductSelected(product);
+      }
+    } catch {
+      this.snackBar.open(`Product not found: ${barcode}`, 'Dismiss', { duration: 3000 });
+    }
   }
 
   private updateProducts(): void {

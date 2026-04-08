@@ -13,7 +13,7 @@ import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
 import { environment } from '../environments/environment';
 import { SettingsService } from './services/settings.service';
-import { SyncEngineService, OutboxService, SYNC_API_BASE_URL } from 'sync';
+import { SyncEngineService, OutboxService } from 'sync';
 import { GlobalErrorHandler } from './services/global-error-handler';
 
 export const appConfig: ApplicationConfig = {
@@ -23,7 +23,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([jwtInterceptor])),
     provideAnimationsAsync(),
     { provide: API_BASE_URL, useValue: environment.apiUrl },
-    { provide: SYNC_API_BASE_URL, useValue: environment.apiUrl },
     { provide: CLIENT_TOKEN, useClass: Client },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {

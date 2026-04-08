@@ -16,7 +16,7 @@ export class RegisterPage {
     this.productCards = page.locator('app-product-card');
     this.orderSidebar = page.locator('app-order-sidebar');
     this.orderLineItems = page.locator('app-order-line-item-row');
-    this.checkoutButton = page.locator('button', { hasText: /checkout/i });
+    this.checkoutButton = page.locator('.pay-btn');
   }
 
   async selectFirstProduct() {

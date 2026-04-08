@@ -10,6 +10,9 @@ public class Product : BaseEntity
     public int SortOrder { get; set; }
     public bool IsAvailable { get; set; } = true;
     public string? ImageUrl { get; set; }
+    public decimal? TaxRate { get; set; }
+    public string? Barcode { get; set; }
+    public string? Sku { get; set; }
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
     public ICollection<ProductModifier> ProductModifiers { get; set; } = new List<ProductModifier>();
 }

@@ -56,14 +56,17 @@ import { MatIconModule } from '@angular/material/icon';
         gap: 12px;
       }
       .dot {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         border: 2px solid var(--mat-sys-primary);
-        transition: background-color 0.15s;
+        transition:
+          background-color 0.15s,
+          transform 0.15s;
       }
       .dot.filled {
         background-color: var(--mat-sys-primary);
+        transform: scale(1.15);
       }
       .error-message {
         color: var(--mat-sys-error);
@@ -82,6 +85,17 @@ import { MatIconModule } from '@angular/material/icon';
         font-size: 24px;
         font-weight: 500;
         border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .key-btn mat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
       }
     `,
   ],

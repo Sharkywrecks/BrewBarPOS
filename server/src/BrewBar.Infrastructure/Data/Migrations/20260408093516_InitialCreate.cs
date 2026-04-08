@@ -20,7 +20,8 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     StoreName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     StoreInfo = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
                     TaxRate = table.Column<decimal>(type: "TEXT", precision: 5, scale: 4, nullable: false),
-                    CurrencyCode = table.Column<string>(type: "TEXT", maxLength: 3, nullable: false),
+                    Currency = table.Column<string>(type: "TEXT", maxLength: 3, nullable: false),
+                    DiscountApprovalThreshold = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -78,10 +79,19 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     TaxAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     TaxRate = table.Column<decimal>(type: "TEXT", precision: 5, scale: 4, nullable: false),
                     Total = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    OrderDiscountAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    OrderDiscountType = table.Column<int>(type: "INTEGER", nullable: true),
+                    OrderDiscountPercent = table.Column<decimal>(type: "TEXT", precision: 5, scale: 2, nullable: true),
+                    OrderDiscountReason = table.Column<string>(type: "TEXT", nullable: true),
                     Notes = table.Column<string>(type: "TEXT", nullable: true),
                     CashierId = table.Column<string>(type: "TEXT", nullable: false),
                     CashierName = table.Column<string>(type: "TEXT", nullable: true),
                     TerminalId = table.Column<int>(type: "INTEGER", nullable: true),
+                    RegisterShiftId = table.Column<int>(type: "INTEGER", nullable: true),
+                    VoidReason = table.Column<string>(type: "TEXT", nullable: true),
+                    VoidedByUserId = table.Column<string>(type: "TEXT", nullable: true),
+                    VoidedByUserName = table.Column<string>(type: "TEXT", nullable: true),
+                    VoidedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -102,12 +112,59 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     AmountTendered = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     ChangeGiven = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     Total = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    TipAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Payments", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Refunds",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    OrderId = table.Column<int>(type: "INTEGER", nullable: false),
+                    OriginalPaymentId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Amount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    Reason = table.Column<string>(type: "TEXT", nullable: false),
+                    PerformedByUserId = table.Column<string>(type: "TEXT", nullable: false),
+                    PerformedByUserName = table.Column<string>(type: "TEXT", nullable: true),
+                    IsFullRefund = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Refunds", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RegisterShifts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TerminalId = table.Column<int>(type: "INTEGER", nullable: false),
+                    CashierId = table.Column<string>(type: "TEXT", nullable: false),
+                    CashierName = table.Column<string>(type: "TEXT", nullable: true),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    OpeningCashAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    ClosingCashAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: true),
+                    ExpectedCashAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: true),
+                    CashOverShort = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: true),
+                    OpenedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ClosedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CloseNotes = table.Column<string>(type: "TEXT", nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RegisterShifts", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -163,6 +220,9 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     SortOrder = table.Column<int>(type: "INTEGER", nullable: false),
                     IsAvailable = table.Column<bool>(type: "INTEGER", nullable: false),
                     ImageUrl = table.Column<string>(type: "TEXT", nullable: true),
+                    TaxRate = table.Column<decimal>(type: "TEXT", precision: 5, scale: 4, nullable: true),
+                    Barcode = table.Column<string>(type: "TEXT", maxLength: 128, nullable: true),
+                    Sku = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -214,6 +274,12 @@ namespace BrewBar.Infrastructure.Data.Migrations
                     UnitPrice = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
                     Quantity = table.Column<int>(type: "INTEGER", nullable: false),
                     LineTotal = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    TaxRate = table.Column<decimal>(type: "TEXT", precision: 5, scale: 4, nullable: false),
+                    TaxAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    DiscountAmount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    DiscountType = table.Column<int>(type: "INTEGER", nullable: true),
+                    DiscountPercent = table.Column<decimal>(type: "TEXT", precision: 5, scale: 2, nullable: true),
+                    DiscountReason = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -224,6 +290,55 @@ namespace BrewBar.Infrastructure.Data.Migrations
                         name: "FK_OrderLineItems_Orders_OrderId",
                         column: x => x.OrderId,
                         principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RefundLineItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    RefundId = table.Column<int>(type: "INTEGER", nullable: false),
+                    OrderLineItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Quantity = table.Column<int>(type: "INTEGER", nullable: false),
+                    Amount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefundLineItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefundLineItems_Refunds_RefundId",
+                        column: x => x.RefundId,
+                        principalTable: "Refunds",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CashDrops",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    RegisterShiftId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Amount = table.Column<decimal>(type: "TEXT", precision: 10, scale: 2, nullable: false),
+                    Reason = table.Column<string>(type: "TEXT", nullable: true),
+                    PerformedByUserId = table.Column<string>(type: "TEXT", nullable: false),
+                    PerformedByUserName = table.Column<string>(type: "TEXT", nullable: true),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CashDrops", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CashDrops_RegisterShifts_RegisterShiftId",
+                        column: x => x.RegisterShiftId,
+                        principalTable: "RegisterShifts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -306,6 +421,11 @@ namespace BrewBar.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CashDrops_RegisterShiftId",
+                table: "CashDrops",
+                column: "RegisterShiftId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ModifierOptions_ModifierId",
                 table: "ModifierOptions",
                 column: "ModifierId");
@@ -337,14 +457,31 @@ namespace BrewBar.Infrastructure.Data.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Products_Barcode",
+                table: "Products",
+                column: "Barcode",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
                 table: "Products",
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Products_Sku",
+                table: "Products",
+                column: "Sku",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ProductVariants_ProductId",
                 table: "ProductVariants",
                 column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefundLineItems_RefundId",
+                table: "RefundLineItems",
+                column: "RefundId");
         }
 
         /// <inheritdoc />
@@ -352,6 +489,9 @@ namespace BrewBar.Infrastructure.Data.Migrations
         {
             migrationBuilder.DropTable(
                 name: "BusinessSettings");
+
+            migrationBuilder.DropTable(
+                name: "CashDrops");
 
             migrationBuilder.DropTable(
                 name: "ModifierOptions");
@@ -369,10 +509,16 @@ namespace BrewBar.Infrastructure.Data.Migrations
                 name: "ProductVariants");
 
             migrationBuilder.DropTable(
+                name: "RefundLineItems");
+
+            migrationBuilder.DropTable(
                 name: "SyncOutboxEntries");
 
             migrationBuilder.DropTable(
                 name: "Terminals");
+
+            migrationBuilder.DropTable(
+                name: "RegisterShifts");
 
             migrationBuilder.DropTable(
                 name: "OrderLineItems");
@@ -382,6 +528,9 @@ namespace BrewBar.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Products");
+
+            migrationBuilder.DropTable(
+                name: "Refunds");
 
             migrationBuilder.DropTable(
                 name: "Orders");

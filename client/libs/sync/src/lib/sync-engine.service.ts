@@ -1,23 +1,19 @@
-import { Injectable, InjectionToken, inject, OnDestroy } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable, Inject, OnDestroy } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { CLIENT_TOKEN, IClient, CreateOrderDto, CreatePaymentDto } from 'api-client';
 import { OutboxService } from './outbox.service';
-
-/**
- * Injection token for the API base URL.
- * The app must provide this — typically the same value as API_BASE_URL from api-client.
- */
-export const SYNC_API_BASE_URL = new InjectionToken<string>('SYNC_API_BASE_URL');
 
 const SYNC_INTERVAL_MS = 10_000; // Check every 10 seconds
 
 @Injectable({ providedIn: 'root' })
 export class SyncEngineService implements OnDestroy {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = inject(SYNC_API_BASE_URL);
-  private readonly outbox = inject(OutboxService);
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private running = false;
+
+  constructor(
+    @Inject(CLIENT_TOKEN) private readonly client: IClient,
+    private readonly outbox: OutboxService,
+  ) {}
 
   /** Start the background sync loop. Call once at app startup. */
   start(): void {
@@ -62,21 +58,14 @@ export class SyncEngineService implements OnDestroy {
 
     try {
       // Step 1: Create the order (idempotent — server deduplicates by LocalId)
-      const order = await firstValueFrom(
-        this.http.post<{ id: number }>(`${this.baseUrl}/api/orders`, JSON.parse(orderPayload), {
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
+      const orderDto = JSON.parse(orderPayload) as CreateOrderDto;
+      const order = await firstValueFrom(this.client.orders_CreateOrder(orderDto));
 
       // Step 2: Create the payment if we have one
       if (paymentPayload) {
-        const payment = JSON.parse(paymentPayload);
-        payment.orderId = order.id; // Patch with server-assigned ID
-        await firstValueFrom(
-          this.http.post(`${this.baseUrl}/api/payments`, payment, {
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        );
+        const paymentDto = JSON.parse(paymentPayload) as CreatePaymentDto;
+        paymentDto.orderId = order.id!; // Patch with server-assigned ID
+        await firstValueFrom(this.client.payments_CreatePayment(paymentDto));
       }
 
       await this.outbox.markSynced(localId);

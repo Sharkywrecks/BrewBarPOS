@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { PaymentMethod, CreatePaymentDto } from 'api-client';
 import { PrinterService, CashDrawerService, buildReceipt, ReceiptData } from 'printing';
@@ -27,6 +29,8 @@ import { SettingsService } from '../services/settings.service';
     MatDividerModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatFormFieldModule,
+    MatInputModule,
   ],
   template: `
     <div class="checkout-layout">
@@ -52,11 +56,11 @@ import { SettingsService } from '../services/settings.service';
           }
           <mat-divider />
           <div class="summary-line">
-            <span>Subtotal</span>
+            <span>Subtotal (ex-VAT)</span>
             <span>{{ cart.subtotal() | currency }}</span>
           </div>
           <div class="summary-line">
-            <span>Tax</span>
+            <span>VAT</span>
             <span>{{ cart.taxAmount() | currency }}</span>
           </div>
           <div class="summary-line total">
@@ -69,6 +73,48 @@ import { SettingsService } from '../services/settings.service';
           <div class="notes-display">
             <mat-icon>note</mat-icon>
             {{ cart.notes() }}
+          </div>
+        }
+
+        <!-- Tip -->
+        <h2>Tip</h2>
+        <div class="tip-buttons">
+          @for (pct of tipPercentages; track pct) {
+            <button
+              mat-stroked-button
+              [class.selected]="selectedTipPercent() === pct"
+              (click)="selectTipPercent(pct)"
+            >
+              {{ pct }}%
+            </button>
+          }
+          <button
+            mat-stroked-button
+            [class.selected]="selectedTipPercent() === 0 && !customTipMode()"
+            (click)="selectNoTip()"
+          >
+            No Tip
+          </button>
+          <button mat-stroked-button [class.selected]="customTipMode()" (click)="enableCustomTip()">
+            Custom
+          </button>
+        </div>
+        @if (customTipMode()) {
+          <mat-form-field appearance="outline" class="custom-tip-field">
+            <mat-label>Custom tip amount</mat-label>
+            <input
+              matInput
+              type="number"
+              min="0"
+              [ngModel]="customTipValue()"
+              (ngModelChange)="customTipValue.set($event)"
+            />
+          </mat-form-field>
+        }
+        @if (tipAmount() > 0) {
+          <div class="tip-display">
+            Tip: <strong>{{ tipAmount() | currency }}</strong> — Grand Total:
+            <strong>{{ grandTotal() | currency }}</strong>
           </div>
         }
 
@@ -102,7 +148,7 @@ import { SettingsService } from '../services/settings.service';
                   {{ amount | currency }}
                 </button>
               }
-              <button mat-stroked-button (click)="setCashAmount(cart.total())">Exact</button>
+              <button mat-stroked-button (click)="setCashAmount(grandTotal())">Exact</button>
             </div>
             <div class="numpad">
               @for (key of numKeys; track key) {
@@ -155,6 +201,13 @@ import { SettingsService } from '../services/settings.service';
       .back-btn {
         margin-bottom: 8px;
       }
+      .back-btn mat-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
       h1 {
         font-size: 24px;
         font-weight: 700;
@@ -199,6 +252,40 @@ import { SettingsService } from '../services/settings.service';
         background: var(--mat-sys-surface-container);
         border-radius: 8px;
       }
+      .notes-display mat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .tip-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .tip-buttons button {
+        flex: 1;
+        min-width: 64px;
+        height: 44px;
+      }
+      .tip-buttons button.selected {
+        border-color: var(--mat-sys-primary);
+        color: var(--mat-sys-primary);
+        font-weight: 600;
+      }
+      .custom-tip-field {
+        width: 100%;
+        margin-top: 12px;
+      }
+      .tip-display {
+        text-align: center;
+        font-size: 16px;
+        padding: 12px;
+        margin-top: 8px;
+        background: var(--mat-sys-secondary-container);
+        color: var(--mat-sys-on-secondary-container);
+        border-radius: 8px;
+      }
       .payment-toggle {
         width: 100%;
       }
@@ -209,6 +296,10 @@ import { SettingsService } from '../services/settings.service';
       }
       .method-btn mat-icon {
         margin-right: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
       }
       .cash-section {
         margin-top: 8px;
@@ -263,6 +354,7 @@ import { SettingsService } from '../services/settings.service';
         font-weight: 600;
         margin-top: 24px;
         margin-bottom: 24px;
+        border-radius: 12px;
       }
     `,
   ],
@@ -282,25 +374,44 @@ export class CheckoutPage {
   protected readonly cashInput = signal('');
   protected readonly submitting = signal(false);
 
+  // Tip state
+  protected readonly tipPercentages = [15, 18, 20];
+  protected readonly selectedTipPercent = signal<number>(0);
+  protected readonly customTipMode = signal(false);
+  protected readonly customTipValue = signal<number>(0);
+
+  protected readonly tipAmount = computed(() => {
+    if (this.customTipMode()) {
+      return Math.round((this.customTipValue() || 0) * 100) / 100;
+    }
+    const pct = this.selectedTipPercent();
+    if (pct <= 0) return 0;
+    return Math.round(this.cart.total() * (pct / 100) * 100) / 100;
+  });
+
+  protected readonly grandTotal = computed(
+    () => Math.round((this.cart.total() + this.tipAmount()) * 100) / 100,
+  );
+
   protected readonly cashAmount = computed(() => {
     const val = parseFloat(this.cashInput());
     return isNaN(val) ? 0 : val;
   });
 
   protected readonly change = computed(() =>
-    Math.max(0, Math.round((this.cashAmount() - this.cart.total()) * 100) / 100),
+    Math.max(0, Math.round((this.cashAmount() - this.grandTotal()) * 100) / 100),
   );
 
   protected readonly canSubmit = computed(() => {
     if (this.cart.isEmpty()) return false;
     if (this.paymentMethod() === PaymentMethod.Cash) {
-      return this.cashAmount() >= this.cart.total();
+      return this.cashAmount() >= this.grandTotal();
     }
     return true; // Card always submittable
   });
 
   protected readonly quickAmounts = computed(() => {
-    const total = this.cart.total();
+    const total = this.grandTotal();
     const amounts = [5, 10, 20, 50, 100].filter((a) => a >= total);
     return amounts.slice(0, 4);
   });
@@ -314,6 +425,23 @@ export class CheckoutPage {
   }): number {
     const modTotal = item.modifierItems.reduce((s, m) => s + m.price, 0);
     return (item.unitPrice + modTotal) * item.quantity;
+  }
+
+  protected selectTipPercent(pct: number): void {
+    this.customTipMode.set(false);
+    this.customTipValue.set(0);
+    this.selectedTipPercent.set(pct);
+  }
+
+  protected selectNoTip(): void {
+    this.customTipMode.set(false);
+    this.customTipValue.set(0);
+    this.selectedTipPercent.set(0);
+  }
+
+  protected enableCustomTip(): void {
+    this.selectedTipPercent.set(0);
+    this.customTipMode.set(true);
   }
 
   protected setCashAmount(amount: number): void {
@@ -344,7 +472,8 @@ export class CheckoutPage {
       const order = await this.orderService.createOrder(orderDto);
 
       const isCash = this.paymentMethod() === PaymentMethod.Cash;
-      const amountTendered = isCash ? this.cashAmount() : this.cart.total();
+      const tip = this.tipAmount();
+      const amountTendered = isCash ? this.cashAmount() : this.grandTotal();
       const changeGiven = isCash ? this.change() : 0;
 
       const paymentDto: CreatePaymentDto = {
@@ -352,6 +481,7 @@ export class CheckoutPage {
         method: this.paymentMethod(),
         amountTendered,
         total: this.cart.total(),
+        tipAmount: tip,
       };
 
       await this.orderService.createPayment(paymentDto);
@@ -376,7 +506,9 @@ export class CheckoutPage {
         paymentMethod: isCash ? 'Cash' : 'Card',
         amountTendered,
         changeGiven,
+        tipAmount: tip > 0 ? tip : undefined,
         dateTime: new Date(),
+        currencySymbol: this.settings.currencySymbol,
       };
 
       const isOffline = this.orderService.wasOffline;

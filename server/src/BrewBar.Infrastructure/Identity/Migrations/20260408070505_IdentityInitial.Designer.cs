@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BrewBar.Infrastructure.Identity.Migrations
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    [Migration("20260407151026_IdentityInitial")]
+    [Migration("20260408070505_IdentityInitial")]
     partial class IdentityInitial
     {
         /// <inheritdoc />

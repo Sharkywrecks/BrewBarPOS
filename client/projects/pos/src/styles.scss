@@ -46,6 +46,22 @@ textarea,
   user-select: text;
 }
 
+// Global icon centering fix — Material icons inside buttons should always center
+.mat-mdc-button .mat-icon,
+.mat-mdc-outlined-button .mat-icon,
+.mat-mdc-unelevated-button .mat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.mat-mdc-icon-button .mat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 // Modifier bottom sheet panel
 .modifier-sheet-panel {
   max-height: 85vh !important;

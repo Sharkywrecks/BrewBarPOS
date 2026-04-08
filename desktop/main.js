@@ -117,6 +117,30 @@ function waitForApi(retries = 30, delay = 1000) {
 
 // ─── Window ────────────────────────────────────────────────────
 
+const LOADING_HTML = `data:text/html;charset=utf-8,${encodeURIComponent(`
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin:0; display:flex; align-items:center; justify-content:center; height:100vh;
+         background:#faf8f5; font-family:system-ui,-apple-system,sans-serif; color:#3c3836; }
+  .loader { text-align:center; }
+  h1 { font-size:32px; font-weight:700; letter-spacing:1px; margin:0 0 16px; }
+  .spinner { width:36px; height:36px; border:3px solid #e0dcd8; border-top-color:#6d5e4b;
+             border-radius:50%; animation:spin .8s linear infinite; margin:0 auto; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  p { color:#8a8279; margin-top:16px; font-size:14px; }
+</style>
+</head>
+<body>
+  <div class="loader">
+    <h1>BrewBar</h1>
+    <div class="spinner"></div>
+    <p>Starting up\u2026</p>
+  </div>
+</body>
+</html>`)}`;
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -129,9 +153,15 @@ function createWindow() {
     autoHideMenuBar: true,
   });
 
-  mainWindow.webContents.session.clearCache();
-  mainWindow.loadURL(API_URL);
+  mainWindow.loadURL(LOADING_HTML);
   mainWindow.on('closed', () => { mainWindow = null; });
+}
+
+function showApp() {
+  if (mainWindow) {
+    mainWindow.webContents.session.clearCache();
+    mainWindow.loadURL(API_URL);
+  }
 }
 
 // ─── First-launch helpers (standalone only) ────────────────────
@@ -184,8 +214,8 @@ async function tryApplySettings() {
   const payload = JSON.stringify({
     storeName: settings.storeName || 'BrewBar',
     storeInfo: settings.storeInfo || null,
-    taxRate: parseFloat(settings.taxRate) || 0.0875,
-    currencyCode: settings.currencyCode || 'USD',
+    taxRate: settings.taxRatePercent ? parseFloat(settings.taxRatePercent) / 100 : 0.15,
+    currency: settings.currency || 'SCR',
   });
 
   const res = await httpRequest(`${API_URL}/api/settings`, {
@@ -198,6 +228,25 @@ async function tryApplySettings() {
   }, payload);
 
   console.log(`[Settings] Response (${res.status}): ${res.body}`);
+
+  // Setup admin account if custom credentials were provided
+  if (settings.adminEmail && settings.adminEmail !== 'admin@brewbar.local') {
+    const adminPayload = JSON.stringify({
+      displayName: settings.adminName || 'Admin',
+      email: settings.adminEmail,
+      password: settings.adminPassword || 'Admin123!',
+      pin: settings.adminPin || '1234',
+    });
+    const adminRes = await httpRequest(`${API_URL}/api/auth/setup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(adminPayload),
+      },
+    }, adminPayload);
+    console.log(`[Admin Setup] Response (${adminRes.status}): ${adminRes.body}`);
+  }
+
   fs.unlinkSync(settingsFile);
 }
 
@@ -240,6 +289,8 @@ async function tryMenuImport() {
 // ─── App lifecycle ─────────────────────────────────────────────
 
 app.on('ready', async () => {
+  createWindow(); // Show loading screen immediately
+
   if (MODE === 'standalone') {
     startApi();
     try {
@@ -252,7 +303,6 @@ app.on('ready', async () => {
       return;
     }
   } else if (MODE === 'terminal') {
-    // Terminal mode: just verify the remote API is reachable
     try {
       await waitForApi(10, 2000);
     } catch {
@@ -260,7 +310,7 @@ app.on('ready', async () => {
     }
   }
 
-  createWindow();
+  showApp(); // Navigate to the actual app once API is ready
 });
 
 app.on('window-all-closed', () => {

@@ -8,6 +8,7 @@ import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductDto, ProductVariantDto, ProductModifierDto, ModifierOptionDto } from 'api-client';
 import { CartLineItem, CartModifierItem } from '../store/cart.models';
+import { SettingsService } from '../services/settings.service';
 
 export interface ModifierSheetData {
   product: ProductDto;
@@ -164,6 +165,7 @@ interface ModifierSelection {
 export class ModifierSheetComponent {
   protected readonly data = inject<ModifierSheetData>(MAT_BOTTOM_SHEET_DATA);
   private readonly sheetRef = inject(MatBottomSheetRef);
+  private readonly settingsService = inject(SettingsService);
 
   protected selectedVariantId = signal<number | null>(null);
   protected singleSelections = signal<Record<number, number>>({});
@@ -226,6 +228,11 @@ export class ModifierSheetComponent {
       variantName: variant?.name ?? null,
       unitPrice: variant?.priceOverride ?? product.basePrice!,
       quantity: 1,
+      taxRate: product.taxRate ?? this.settingsService.taxRate,
+      discountAmount: 0,
+      discountType: null,
+      discountPercent: null,
+      discountReason: null,
       modifierItems,
     };
 

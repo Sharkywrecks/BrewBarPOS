@@ -20,10 +20,11 @@ import { ProductCardComponent } from './product-card.component';
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-        padding: 16px;
+        gap: 10px;
+        padding: 12px 16px;
         overflow-y: auto;
         height: 100%;
+        align-content: start;
       }
       .empty-state {
         grid-column: 1 / -1;

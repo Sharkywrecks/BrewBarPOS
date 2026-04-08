@@ -5,19 +5,25 @@ using BrewBar.Infrastructure.Data.Seed;
 using BrewBar.Infrastructure.Identity;
 using Microsoft.EntityFrameworkCore;
 
-// Use the directory containing the EXE (not AppContext.BaseDirectory which may be a temp extraction dir for single-file)
-var contentRoot = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+// For published single-file exe, use the exe's directory (AppContext.BaseDirectory may be a temp extraction dir).
+// For development/NSwag, fall back to AppContext.BaseDirectory which is the project output directory.
+var processDir = Path.GetDirectoryName(Environment.ProcessPath);
+var isPublishedExe = processDir != null
+    && File.Exists(Path.Combine(processDir, "appsettings.json"));
+var contentRoot = isPublishedExe ? processDir! : AppContext.BaseDirectory;
+
 var envName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 if (string.IsNullOrEmpty(envName) && File.Exists(Path.Combine(contentRoot, "appsettings.Desktop.json")))
 {
     envName = "Desktop";
 }
 
+var wwwrootCandidate = Path.Combine(contentRoot, "wwwroot");
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = contentRoot,
-    WebRootPath = Path.Combine(contentRoot, "wwwroot"),
+    WebRootPath = Directory.Exists(wwwrootCandidate) ? wwwrootCandidate : null,
     EnvironmentName = envName
 });
 
@@ -27,9 +33,10 @@ builder.Services.AddSwaggerServices();
 
 var app = builder.Build();
 
-// Apply migrations and seed data
-using (var scope = app.Services.CreateScope())
+// Apply migrations and seed data (skip for NSwag client generation)
+if (!app.Environment.IsEnvironment("NSwag"))
 {
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
 

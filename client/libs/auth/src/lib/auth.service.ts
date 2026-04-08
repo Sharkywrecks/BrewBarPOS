@@ -1,6 +1,6 @@
 import { Injectable, Inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { CLIENT_TOKEN, IClient, UserDto, PinLoginDto } from 'api-client';
+import { CLIENT_TOKEN, IClient, UserDto, StaffDto, PinLoginDto } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 
 const TOKEN_KEY = 'brewbar_token';
@@ -14,6 +14,10 @@ export class AuthService {
     @Inject(CLIENT_TOKEN) private readonly client: IClient,
     private readonly router: Router,
   ) {}
+
+  async getStaff(): Promise<StaffDto[]> {
+    return firstValueFrom(this.client.auth_GetStaff());
+  }
 
   async pinLogin(pin: string): Promise<UserDto> {
     const dto: PinLoginDto = { pin };

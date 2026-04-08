@@ -29,36 +29,43 @@ import { ProductDto } from 'api-client';
       .product-card {
         cursor: pointer;
         height: 100%;
-        min-height: 96px;
+        min-height: 100px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
-        transition: box-shadow 0.2s;
+        transition:
+          box-shadow 0.2s,
+          transform 0.1s;
         user-select: none;
         -webkit-user-select: none;
+        border-radius: 12px;
+        padding: 4px;
       }
       .product-card:active {
         box-shadow: none;
+        transform: scale(0.97);
       }
       .product-card.unavailable {
-        opacity: 0.4;
+        opacity: 0.35;
         pointer-events: none;
       }
       .product-name {
         font-size: 15px;
-        font-weight: 500;
+        font-weight: 600;
         line-height: 1.3;
       }
       .product-price {
         font-size: 13px;
-        opacity: 0.7;
-        margin-top: 4px;
+        opacity: 0.6;
+        margin-top: 6px;
+        font-weight: 500;
       }
       .variant-hint {
         font-size: 11px;
-        opacity: 0.5;
-        margin-top: 2px;
+        opacity: 0.45;
+        margin-top: 3px;
+        font-style: italic;
       }
     `,
   ],

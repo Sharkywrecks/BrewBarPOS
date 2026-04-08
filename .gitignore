@@ -62,6 +62,9 @@ docker-compose.override.yml
 TestResults/
 coverage/
 *.trx
+client/playwright-integration-report/
+client/playwright-admin-report/
+client/test-results/
 
 ## Desktop build output
 build/

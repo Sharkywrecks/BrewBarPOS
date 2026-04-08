@@ -10,4 +10,5 @@ public class Payment : BaseEntity
     public decimal AmountTendered { get; set; }
     public decimal ChangeGiven { get; set; }
     public decimal Total { get; set; }
+    public decimal TipAmount { get; set; }
 }

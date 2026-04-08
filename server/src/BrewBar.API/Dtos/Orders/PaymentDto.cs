@@ -11,6 +11,7 @@ public class PaymentDto
     public decimal AmountTendered { get; set; }
     public decimal ChangeGiven { get; set; }
     public decimal Total { get; set; }
+    public decimal TipAmount { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 
@@ -20,4 +21,5 @@ public class CreatePaymentDto
     public PaymentMethod Method { get; set; } = PaymentMethod.Cash;
     public decimal AmountTendered { get; set; }
     public decimal Total { get; set; }
+    public decimal TipAmount { get; set; }
 }

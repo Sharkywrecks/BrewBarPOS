@@ -2,6 +2,7 @@ using BrewBar.Core.Entities;
 using BrewBar.Core.Entities.CatalogAggregate;
 using BrewBar.Core.Entities.OrderAggregate;
 using BrewBar.Core.Entities.PaymentAggregate;
+using BrewBar.Core.Entities.ShiftAggregate;
 using BrewBar.Core.Entities.SyncAggregate;
 using BrewBar.Core.Entities.TerminalAggregate;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,11 @@ public class BrewBarContext : DbContext
     public DbSet<OrderLineItem> OrderLineItems => Set<OrderLineItem>();
     public DbSet<OrderModifierItem> OrderModifierItems => Set<OrderModifierItem>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Refund> Refunds => Set<Refund>();
+    public DbSet<RefundLineItem> RefundLineItems => Set<RefundLineItem>();
     public DbSet<Terminal> Terminals => Set<Terminal>();
+    public DbSet<RegisterShift> RegisterShifts => Set<RegisterShift>();
+    public DbSet<CashDrop> CashDrops => Set<CashDrop>();
     public DbSet<SyncOutboxEntry> SyncOutboxEntries => Set<SyncOutboxEntry>();
     public DbSet<BusinessSettings> BusinessSettings => Set<BusinessSettings>();
 

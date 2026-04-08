@@ -33,12 +33,13 @@ function makeReceipt(overrides: Partial<ReceiptData> = {}): ReceiptData {
       },
     ],
     subtotal: 13.0,
-    taxRate: 0.08,
-    taxAmount: 1.04,
-    total: 14.04,
+    taxRate: 0.15,
+    taxAmount: 1.95,
+    total: 14.95,
     paymentMethod: 'Cash',
     amountTendered: 20.0,
-    changeGiven: 5.96,
+    changeGiven: 5.05,
+    currencySymbol: 'SCR ',
     dateTime: new Date(2026, 3, 7, 14, 30),
     ...overrides,
   };
@@ -112,22 +113,22 @@ describe('Receipt Builder', () => {
     expect(text).toContain('+ Protein');
   });
 
-  it('should render subtotal', () => {
+  it('should render subtotal with currency symbol', () => {
     const text = decode(buildReceipt(makeReceipt()));
     expect(text).toContain('Subtotal');
-    expect(text).toContain('$13.00');
+    expect(text).toContain('SCR 13.00');
   });
 
-  it('should render tax with percentage', () => {
+  it('should render VAT with percentage', () => {
     const text = decode(buildReceipt(makeReceipt()));
-    expect(text).toContain('Tax (8.0%)');
-    expect(text).toContain('$1.04');
+    expect(text).toContain('VAT (15.0%)');
+    expect(text).toContain('SCR 1.95');
   });
 
   it('should render total', () => {
     const text = decode(buildReceipt(makeReceipt()));
     expect(text).toContain('TOTAL');
-    expect(text).toContain('$14.04');
+    expect(text).toContain('SCR 14.95');
   });
 
   it('should render payment method', () => {
@@ -137,8 +138,8 @@ describe('Receipt Builder', () => {
 
   it('should render amount tendered and change', () => {
     const text = decode(buildReceipt(makeReceipt()));
-    expect(text).toContain('$20.00');
-    expect(text).toContain('$5.96');
+    expect(text).toContain('SCR 20.00');
+    expect(text).toContain('SCR 5.05');
   });
 
   it('should omit change line when change is 0', () => {
@@ -172,5 +173,24 @@ describe('Receipt Builder', () => {
     const text = decode(buildReceipt(data));
     expect(text).toContain('Water');
     expect(text).not.toContain('+ ');
+  });
+
+  it('should use provided currency symbol', () => {
+    const text = decode(buildReceipt(makeReceipt({ currencySymbol: '$ ' })));
+    expect(text).toContain('$ 14.95');
+  });
+
+  it('should render tip and grand total when tip provided', () => {
+    const text = decode(buildReceipt(makeReceipt({ tipAmount: 2.0 })));
+    expect(text).toContain('Tip');
+    expect(text).toContain('SCR 2.00');
+    expect(text).toContain('GRAND TOTAL');
+    expect(text).toContain('SCR 16.95');
+  });
+
+  it('should omit tip line when no tip', () => {
+    const text = decode(buildReceipt(makeReceipt()));
+    expect(text).not.toContain('Tip');
+    expect(text).not.toContain('GRAND TOTAL');
   });
 });

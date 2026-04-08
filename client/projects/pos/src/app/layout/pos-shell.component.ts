@@ -5,9 +5,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AuthService } from 'auth';
 import { PrinterService } from 'printing';
 import { OutboxService, SyncEngineService } from 'sync';
+import { ShiftService } from '../services/shift.service';
+import { OpenShiftDialogComponent } from '../register/open-shift-dialog.component';
+import {
+  CloseShiftDialogComponent,
+  CloseShiftResult,
+} from '../register/close-shift-dialog.component';
+import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-dialog.component';
 
 @Component({
   selector: 'app-pos-shell',
@@ -20,11 +28,20 @@ import { OutboxService, SyncEngineService } from 'sync';
     MatIconModule,
     MatTooltipModule,
     MatSnackBarModule,
+    MatDialogModule,
   ],
   template: `
     <mat-toolbar color="primary" class="pos-toolbar">
       <span class="brand">BrewBar</span>
       <span class="spacer"></span>
+      @if (shift.currentShift()) {
+        <button mat-icon-button matTooltip="Cash Drop" (click)="onCashDrop()">
+          <mat-icon>move_to_inbox</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close Shift" (click)="onCloseShift()">
+          <mat-icon>point_of_sale</mat-icon>
+        </button>
+      }
       <button mat-icon-button routerLink="/history" matTooltip="Order history">
         <mat-icon>history</mat-icon>
       </button>
@@ -67,16 +84,31 @@ import { OutboxService, SyncEngineService } from 'sync';
         flex-shrink: 0;
         height: 48px;
         font-size: 16px;
+        gap: 2px;
+      }
+      .pos-toolbar button[mat-icon-button] {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pos-toolbar button[mat-icon-button] ::ng-deep .mat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .brand {
-        font-weight: 700;
-        letter-spacing: 0.5px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        font-size: 18px;
       }
       .spacer {
         flex: 1;
       }
       .cashier-name {
-        margin-right: 8px;
+        margin: 0 4px 0 8px;
         font-size: 14px;
         opacity: 0.9;
       }
@@ -104,7 +136,9 @@ export class PosShellComponent {
   protected readonly printer = inject(PrinterService);
   protected readonly outbox = inject(OutboxService);
   protected readonly syncEngine = inject(SyncEngineService);
+  protected readonly shift = inject(ShiftService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   async onPrinterToggle(): Promise<void> {
     try {
@@ -119,5 +153,35 @@ export class PosShellComponent {
       const msg = err instanceof Error ? err.message : 'Failed to connect printer';
       this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
     }
+  }
+
+  onCloseShift(): void {
+    const ref = this.dialog.open(CloseShiftDialogComponent, { width: '400px' });
+    ref.afterClosed().subscribe(async (result: CloseShiftResult | undefined) => {
+      if (!result) return;
+      const shiftId = this.shift.currentShift()?.id;
+      if (!shiftId) return;
+      try {
+        await this.shift.closeShift(shiftId, result.closingCashAmount, result.notes ?? undefined);
+        this.snackBar.open('Shift closed.', 'OK', { duration: 3000 });
+      } catch {
+        this.snackBar.open('Failed to close shift.', 'Dismiss', { duration: 5000 });
+      }
+    });
+  }
+
+  onCashDrop(): void {
+    const ref = this.dialog.open(CashDropDialogComponent, { width: '400px' });
+    ref.afterClosed().subscribe(async (result: CashDropResult | undefined) => {
+      if (!result) return;
+      const shiftId = this.shift.currentShift()?.id;
+      if (!shiftId) return;
+      try {
+        await this.shift.addCashDrop(shiftId, result.amount, result.reason ?? undefined);
+        this.snackBar.open('Cash drop recorded.', 'OK', { duration: 3000 });
+      } catch {
+        this.snackBar.open('Failed to record cash drop.', 'Dismiss', { duration: 5000 });
+      }
+    });
   }
 }

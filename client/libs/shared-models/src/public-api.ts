@@ -1,5 +1,1 @@
-/*
- * Public API Surface of shared-models
- */
-
-export * from './lib/shared-models';
+export { SharedModels } from './lib/shared-models';

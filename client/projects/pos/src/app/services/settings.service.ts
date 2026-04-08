@@ -1,32 +1,23 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable, Inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { API_BASE_URL } from 'api-client';
+import { CLIENT_TOKEN, IClient, BusinessSettingsDto, Currency } from 'api-client';
 import { environment } from '../../environments/environment';
-
-export interface AppSettings {
-  storeName: string;
-  storeInfo?: string;
-  taxRate: number;
-  currencyCode: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = inject(API_BASE_URL);
+  constructor(@Inject(CLIENT_TOKEN) private readonly client: IClient) {}
 
-  readonly settings = signal<AppSettings>({
+  readonly settings = signal<BusinessSettingsDto>({
     storeName: environment.storeName,
     taxRate: environment.taxRate,
-    currencyCode: 'USD',
+    currency: Currency.SCR,
   });
 
   readonly loaded = signal(false);
 
   async load(): Promise<void> {
     try {
-      const s = await firstValueFrom(this.http.get<AppSettings>(`${this.baseUrl}/api/settings`));
+      const s = await firstValueFrom(this.client.settings_GetSettings());
       this.settings.set(s);
     } catch {
       // Fall back to environment defaults if API is unreachable
@@ -41,5 +32,17 @@ export class SettingsService {
 
   get taxRate(): number {
     return this.settings().taxRate ?? environment.taxRate;
+  }
+
+  /** Currency symbol string for receipt printing */
+  get currencySymbol(): string {
+    const SYMBOLS: Record<Currency, string> = {
+      [Currency.SCR]: 'SCR ',
+      [Currency.USD]: '$ ',
+      [Currency.EUR]: '€ ',
+      [Currency.GBP]: '£ ',
+      [Currency.AED]: 'AED ',
+    };
+    return SYMBOLS[this.settings().currency ?? Currency.SCR] ?? 'SCR ';
   }
 }

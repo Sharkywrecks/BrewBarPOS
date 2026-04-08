@@ -22,6 +22,9 @@ import { CartLineItem } from '../store/cart.models';
             {{ modifierSummary() }}
           </div>
         }
+        @if (item().discountAmount > 0) {
+          <div class="discount-info">-{{ item().discountAmount | currency }} discount</div>
+        }
       </div>
       <div class="item-controls">
         <div class="qty-controls">
@@ -34,6 +37,13 @@ import { CartLineItem } from '../store/cart.models';
           </button>
         </div>
         <span class="line-total">{{ lineTotal() | currency }}</span>
+        <button
+          mat-icon-button
+          class="discount-item-btn"
+          (click)="discountRequested.emit(item().localId)"
+        >
+          <mat-icon>local_offer</mat-icon>
+        </button>
         <button mat-icon-button class="remove-btn" (click)="remove.emit(item().localId)">
           <mat-icon>close</mat-icon>
         </button>
@@ -85,11 +95,18 @@ import { CartLineItem } from '../store/cart.models';
       .qty-btn {
         width: 32px;
         height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
       .qty-btn ::ng-deep .mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .qty {
         font-size: 14px;
@@ -103,15 +120,44 @@ import { CartLineItem } from '../store/cart.models';
         min-width: 56px;
         text-align: right;
       }
+      .discount-info {
+        font-size: 12px;
+        color: var(--mat-sys-error);
+        font-weight: 500;
+      }
+      .discount-item-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.5;
+      }
+      .discount-item-btn ::ng-deep .mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
       .remove-btn {
         width: 32px;
         height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         opacity: 0.5;
       }
       .remove-btn ::ng-deep .mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     `,
   ],
@@ -120,6 +166,7 @@ export class OrderLineItemRowComponent {
   readonly item = input.required<CartLineItem>();
   readonly quantityChanged = output<{ localId: string; quantity: number }>();
   readonly remove = output<string>();
+  readonly discountRequested = output<string>();
 
   protected modifierSummary(): string {
     return this.item()

@@ -71,12 +71,21 @@ interface OrderCompleteState {
         padding: 40px;
         text-align: center;
         min-width: 400px;
+        border-radius: 16px;
+      }
+      .success-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .success-icon mat-icon {
         font-size: 72px;
         width: 72px;
         height: 72px;
         color: #4caf50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .offline-notice {
         background: var(--mat-sys-tertiary-container);
@@ -120,6 +129,14 @@ interface OrderCompleteState {
         height: 56px;
         font-size: 18px;
         font-weight: 600;
+        border-radius: 12px;
+      }
+      .new-order-btn mat-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+        margin-right: 4px;
       }
     `,
   ],

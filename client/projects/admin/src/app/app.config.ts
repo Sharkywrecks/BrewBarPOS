@@ -1,4 +1,8 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  APP_INITIALIZER,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -6,7 +10,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { routes } from './app.routes';
 import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
-import { environment } from '../environments/environment';
+import { RuntimeConfigService } from './services/runtime-config.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,7 +18,17 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([jwtInterceptor])),
     provideAnimationsAsync(),
-    { provide: API_BASE_URL, useValue: environment.apiUrl },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (cfg: RuntimeConfigService) => () => cfg.load(),
+      deps: [RuntimeConfigService],
+      multi: true,
+    },
+    {
+      provide: API_BASE_URL,
+      useFactory: (cfg: RuntimeConfigService) => cfg.apiUrl,
+      deps: [RuntimeConfigService],
+    },
     { provide: CLIENT_TOKEN, useClass: Client },
   ],
 };

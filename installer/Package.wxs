@@ -37,6 +37,8 @@
     <Property Id="API_URL" Value="https://your-server.com" Secure="yes" />
 
     <UI>
+      <TextStyle Id="WixUI_Font_Bold" FaceName="Tahoma" Size="8" Bold="yes" />
+
       <!-- Install wizard UI with feature tree (lets users pick shortcuts).
            Must be inside <UI> so custom <Publish> overrides merge correctly. -->
       <ui:WixUI Id="WixUI_FeatureTree" />
@@ -87,7 +89,7 @@
       <!-- ================================================================
            INSTALL: Business Setup + Menu Import dialog (standalone only)
            ================================================================ -->
-      <Dialog Id="MenuImportDlg" Width="370" Height="270" Title="BrewBar POS — Business Setup">
+      <Dialog Id="MenuImportDlg" Width="370" Height="340" Title="BrewBar POS — Business Setup">
         <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15"
                  Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Business Setup" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="320" Height="15"
@@ -101,42 +103,71 @@
         <Control Id="StoreNameEdit" Type="Edit" X="150" Y="50" Width="195" Height="18"
                  Property="STORE_NAME" />
 
-        <!-- Tax Rate -->
+        <!-- Tax Rate (displayed as percentage, stored/converted to decimal) -->
         <Control Id="TaxRateLabel" Type="Text" X="25" Y="76" Width="120" Height="12"
-                 NoPrefix="yes" Text="Tax Rate (e.g. 0.0875):" />
-        <Control Id="TaxRateEdit" Type="Edit" X="150" Y="74" Width="80" Height="18"
-                 Property="TAX_RATE" />
+                 NoPrefix="yes" Text="Tax Rate Percent (e.g. 15):" />
+        <Control Id="TaxRateEdit" Type="Edit" X="150" Y="74" Width="50" Height="18"
+                 Property="TAX_RATE_PCT" />
+        <Control Id="TaxRateSuffix" Type="Text" X="203" Y="78" Width="20" Height="12"
+                 NoPrefix="yes" Text="%" />
 
-        <Control Id="Intro" Type="Text" X="25" Y="98" Width="320" Height="25"
-                 NoPrefix="yes"
-                 Text="If you have a menu spreadsheet, browse for it below. Leave blank to start with the sample menu." />
-
-        <Control Id="FormatTitle" Type="Text" X="25" Y="85" Width="320" Height="12"
-                 NoPrefix="yes" Text="Expected Excel format (3 sheets):" />
-
-        <Control Id="FormatDetails" Type="Text" X="25" Y="98" Width="320" Height="60"
-                 NoPrefix="yes"
-                 Text="Sheet 'Products': Category | Product Name | Description | Price | Available&#13;&#10;Sheet 'Modifiers': Modifier Name | Required | Allow Multiple | Option Name | Option Price&#13;&#10;Sheet 'Product Modifiers': Product Name | Modifier Name&#13;&#10;&#13;&#10;A ready-to-fill template (menu-template.xlsx) will be placed in the install directory." />
-
-        <Control Id="FileLabel" Type="Text" X="25" Y="168" Width="320" Height="12"
-                 NoPrefix="yes" Text="Menu file path (optional):" />
-
-        <Control Id="MenuFilePath" Type="Edit" X="25" Y="182" Width="275" Height="18"
-                 Property="MENU_FILE" />
-        <Control Id="BrowseBtn" Type="PushButton" X="305" Y="182" Width="45" Height="18" Text="Browse">
-          <Publish Property="_BrowseProperty" Value="MENU_FILE" Order="1" />
-          <Publish Event="SpawnDialog" Value="BrowseDlg" Order="2" />
+        <!-- Currency -->
+        <Control Id="CurrencyLabel" Type="Text" X="25" Y="100" Width="120" Height="12"
+                 NoPrefix="yes" Text="Currency:" />
+        <Control Id="CurrencyCombo" Type="ComboBox" X="150" Y="98" Width="80" Height="18"
+                 Property="CURRENCY_CODE">
+          <ComboBox Property="CURRENCY_CODE">
+            <ListItem Value="SCR" Text="SCR" />
+            <ListItem Value="USD" Text="USD" />
+            <ListItem Value="EUR" Text="EUR" />
+            <ListItem Value="GBP" Text="GBP" />
+          </ComboBox>
         </Control>
 
-        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <!-- Admin Account -->
+        <Control Id="AdminSectionLabel" Type="Text" X="25" Y="122" Width="320" Height="12"
+                 NoPrefix="yes" Text="{\WixUI_Font_Bold}Admin Account" />
+        <Control Id="AdminNameLabel" Type="Text" X="25" Y="138" Width="60" Height="12"
+                 NoPrefix="yes" Text="Name:" />
+        <Control Id="AdminNameEdit" Type="Edit" X="90" Y="136" Width="100" Height="18"
+                 Property="ADMIN_NAME" />
+        <Control Id="AdminEmailLabel" Type="Text" X="195" Y="138" Width="40" Height="12"
+                 NoPrefix="yes" Text="Email:" />
+        <Control Id="AdminEmailEdit" Type="Edit" X="240" Y="136" Width="105" Height="18"
+                 Property="ADMIN_EMAIL" />
+        <Control Id="AdminPasswordLabel" Type="Text" X="25" Y="160" Width="60" Height="12"
+                 NoPrefix="yes" Text="Password:" />
+        <Control Id="AdminPasswordEdit" Type="Edit" X="90" Y="158" Width="100" Height="18"
+                 Property="ADMIN_PASSWORD" />
+        <Control Id="AdminPinLabel" Type="Text" X="195" Y="160" Width="40" Height="12"
+                 NoPrefix="yes" Text="PIN:" />
+        <Control Id="AdminPinEdit" Type="Edit" X="240" Y="158" Width="60" Height="18"
+                 Property="ADMIN_PIN" />
 
-        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="Back">
+        <!-- Menu Import -->
+        <Control Id="MenuSectionLabel" Type="Text" X="25" Y="184" Width="320" Height="12"
+                 NoPrefix="yes" Text="{\WixUI_Font_Bold}Menu Import (optional)" />
+        <Control Id="Intro" Type="Text" X="25" Y="198" Width="320" Height="20"
+                 NoPrefix="yes"
+                 Text="Browse for an Excel menu file, or leave blank to start with the sample menu." />
+
+        <Control Id="FileLabel" Type="Text" X="25" Y="222" Width="320" Height="12"
+                 NoPrefix="yes" Text="Menu file path:" />
+        <Control Id="MenuFilePath" Type="Edit" X="25" Y="236" Width="275" Height="18"
+                 Property="MENU_FILE" />
+        <Control Id="BrowseBtn" Type="PushButton" X="305" Y="236" Width="45" Height="18" Text="Browse">
+          <Publish Event="DoAction" Value="BrowseMenuFile" />
+        </Control>
+
+        <Control Id="BottomLine" Type="Line" X="0" Y="304" Width="370" Height="0" />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="313" Width="56" Height="17" Text="Back">
           <Publish Event="NewDialog" Value="DeployModeDlg" />
         </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="Next">
+        <Control Id="Next" Type="PushButton" X="236" Y="313" Width="56" Height="17" Default="yes" Text="Next">
           <Publish Event="NewDialog" Value="DeleteDataDlg" />
         </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+        <Control Id="Cancel" Type="PushButton" X="304" Y="313" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg" />
         </Control>
       </Dialog>
@@ -238,7 +269,14 @@
 
     <!-- Business settings — set during install, written to JSON config for first-launch import -->
     <Property Id="STORE_NAME" Value="BrewBar" Secure="yes" />
-    <Property Id="TAX_RATE" Value="0.0875" Secure="yes" />
+    <Property Id="TAX_RATE_PCT" Value="15" Secure="yes" />
+    <Property Id="CURRENCY_CODE" Value="SCR" Secure="yes" />
+
+    <!-- Admin account setup -->
+    <Property Id="ADMIN_NAME" Value="Admin" Secure="yes" />
+    <Property Id="ADMIN_EMAIL" Value="admin@brewbar.local" Secure="yes" />
+    <Property Id="ADMIN_PASSWORD" Value="Admin123!" Secure="yes" />
+    <Property Id="ADMIN_PIN" Value="1234" Secure="yes" />
 
     <!-- Write deployment config for Electron to read on startup -->
     <CustomAction Id="WriteDeploymentJson"
@@ -251,10 +289,13 @@
     <!-- Write business settings JSON for first-launch import (standalone only) -->
     <CustomAction Id="WriteSettingsJson"
                   Directory="INSTALLFOLDER"
-                  ExeCommand='cmd.exe /c echo {"storeName":"[STORE_NAME]","taxRate":[TAX_RATE]} > "[INSTALLFOLDER]resources\api\install-settings.json"'
+                  ExeCommand='cmd.exe /c echo {"storeName":"[STORE_NAME]","taxRatePercent":[TAX_RATE_PCT],"currency":"[CURRENCY_CODE]","adminName":"[ADMIN_NAME]","adminEmail":"[ADMIN_EMAIL]","adminPassword":"[ADMIN_PASSWORD]","adminPin":"[ADMIN_PIN]"} > "[INSTALLFOLDER]resources\api\install-settings.json"'
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
+    <!-- Browse for menu file: JScript runs PowerShell OpenFileDialog, sets MENU_FILE -->
+    <CustomAction Id="BrowseMenuFile" Script="jscript" ScriptSourceFile="BrowseMenuFile.js" Return="ignore" />
+
     <SetProperty Id="MENU_FILE_DEST" After="CostFinalize" Value="[INSTALLFOLDER]resources\api\menu-import.xlsx" />
 
     <CustomAction Id="CopyMenuFile"
@@ -283,7 +324,7 @@
       <Custom Action="WriteDeploymentJson" After="InstallFiles" />
       <Custom Action="WriteSettingsJson" After="WriteDeploymentJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
       <Custom Action="CopyMenuFile" After="WriteSettingsJson" Condition="MENU_FILE AND DEPLOY_MODE = &quot;standalone&quot;" />
-      <Custom Action="DeleteUserData" After="RemoveFiles" Condition="REMOVE~=&quot;ALL&quot; AND DELETE_DATA=&quot;1&quot;" />
+      <Custom Action="DeleteUserData" After="RemoveFiles" Condition="DELETE_DATA=&quot;1&quot;" />
     </InstallExecuteSequence>
 
     <!-- Start Menu shortcut -->

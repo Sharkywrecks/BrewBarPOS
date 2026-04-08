@@ -1,0 +1,46 @@
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: src/BrewBar.API/Dockerfile
+    container_name: brewbar-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5000}:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Server
+      DatabaseProvider: MySql
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=brewbar;User=brewbar;Password=${MYSQL_PASSWORD:-brewbar_prod}"
+      Jwt__Secret: "${JWT_SECRET:-CHANGE-THIS-TO-A-RANDOM-SECRET-AT-LEAST-32-CHARS}"
+      Jwt__Issuer: BrewBarAPI
+      Jwt__Audience: BrewBarClient
+      AllowedOrigins__0: "${ALLOWED_ORIGIN:-http://localhost:5000}"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health/ready || exit 1"]
+      start_period: 15s
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mysql:
+    image: mysql:8
+    container_name: brewbar-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-brewbar_root}"
+      MYSQL_DATABASE: brewbar
+      MYSQL_USER: brewbar
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-brewbar_prod}"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:

@@ -12,7 +12,12 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "e2e": "playwright test --config e2e/playwright.config.ts",
-    "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
+    "e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
+    "e2e:integration": "playwright test --config e2e/playwright.integration.config.ts",
+    "e2e:integration:headed": "playwright test --config e2e/playwright.integration.config.ts --headed",
+    "e2e:admin": "playwright test --config e2e/playwright.admin.integration.config.ts",
+    "e2e:admin:headed": "playwright test --config e2e/playwright.admin.integration.config.ts --headed",
+    "e2e:all": "npm run e2e:integration && npm run e2e:admin"
   },
   "private": true,
   "packageManager": "npm@11.11.0",

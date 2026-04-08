@@ -11,6 +11,9 @@ public class ProductDto
     public int SortOrder { get; set; }
     public bool IsAvailable { get; set; }
     public string? ImageUrl { get; set; }
+    public decimal? TaxRate { get; set; }
+    public string? Barcode { get; set; }
+    public string? Sku { get; set; }
     public IList<ProductVariantDto> Variants { get; set; } = new List<ProductVariantDto>();
     public IList<ProductModifierDto> Modifiers { get; set; } = new List<ProductModifierDto>();
 }
@@ -24,6 +27,9 @@ public class CreateProductDto
     public int SortOrder { get; set; }
     public bool IsAvailable { get; set; } = true;
     public string? ImageUrl { get; set; }
+    public decimal? TaxRate { get; set; }
+    public string? Barcode { get; set; }
+    public string? Sku { get; set; }
 }
 
 public class UpdateProductDto
@@ -35,6 +41,9 @@ public class UpdateProductDto
     public int SortOrder { get; set; }
     public bool IsAvailable { get; set; } = true;
     public string? ImageUrl { get; set; }
+    public decimal? TaxRate { get; set; }
+    public string? Barcode { get; set; }
+    public string? Sku { get; set; }
 }
 
 public class ProductVariantDto

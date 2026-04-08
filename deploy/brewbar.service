@@ -1,0 +1,23 @@
+[Unit]
+Description=BrewBar POS API
+After=network.target mysql.service
+
+[Service]
+Type=exec
+User=brewbar
+Group=brewbar
+WorkingDirectory=/opt/brewbar
+ExecStart=/opt/brewbar/BrewBar.API
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_ENVIRONMENT=Server
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/brewbar
+
+[Install]
+WantedBy=multi-user.target

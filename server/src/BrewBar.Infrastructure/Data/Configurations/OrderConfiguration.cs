@@ -13,6 +13,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.TaxAmount).HasPrecision(10, 2);
         builder.Property(o => o.TaxRate).HasPrecision(5, 4);
         builder.Property(o => o.Total).HasPrecision(10, 2);
+        builder.Property(o => o.OrderDiscountAmount).HasPrecision(10, 2);
+        builder.Property(o => o.OrderDiscountPercent).HasPrecision(5, 2);
         builder.HasMany(o => o.LineItems).WithOne(li => li.Order).HasForeignKey(li => li.OrderId);
     }
 }
@@ -23,6 +25,10 @@ public class OrderLineItemConfiguration : IEntityTypeConfiguration<OrderLineItem
     {
         builder.Property(li => li.UnitPrice).HasPrecision(10, 2);
         builder.Property(li => li.LineTotal).HasPrecision(10, 2);
+        builder.Property(li => li.TaxRate).HasPrecision(5, 4);
+        builder.Property(li => li.TaxAmount).HasPrecision(10, 2);
+        builder.Property(li => li.DiscountAmount).HasPrecision(10, 2);
+        builder.Property(li => li.DiscountPercent).HasPrecision(5, 2);
         builder.HasMany(li => li.ModifierItems).WithOne(mi => mi.OrderLineItem).HasForeignKey(mi => mi.OrderLineItemId);
     }
 }

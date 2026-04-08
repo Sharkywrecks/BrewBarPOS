@@ -37,11 +37,13 @@ export interface ReceiptData {
   paymentMethod: string;
   amountTendered: number;
   changeGiven: number;
+  tipAmount?: number;
   dateTime: Date;
+  currencySymbol?: string;
 }
 
-function formatMoney(amount: number): string {
-  return '$' + amount.toFixed(2);
+function formatMoney(amount: number, symbol: string): string {
+  return symbol + amount.toFixed(2);
 }
 
 function formatDate(date: Date): string {
@@ -58,6 +60,7 @@ function formatDate(date: Date): string {
  */
 export function buildReceipt(data: ReceiptData, width = DEFAULT_WIDTH): Uint8Array {
   const parts: Uint8Array[] = [];
+  const sym = data.currencySymbol ?? 'SCR ';
 
   // Reset
   parts.push(initialize());
@@ -90,32 +93,39 @@ export function buildReceipt(data: ReceiptData, width = DEFAULT_WIDTH): Uint8Arr
     const displayName = item.variant ? `${item.name} (${item.variant})` : item.name;
 
     const qty = item.quantity > 1 ? `${item.quantity}x ` : '';
-    parts.push(twoColumnLine(`${qty}${displayName}`, formatMoney(item.lineTotal), width));
+    parts.push(twoColumnLine(`${qty}${displayName}`, formatMoney(item.lineTotal, sym), width));
 
     for (const mod of item.modifiers) {
-      parts.push(twoColumnLine(`  + ${mod.name}`, formatMoney(mod.price), width));
+      parts.push(twoColumnLine(`  + ${mod.name}`, formatMoney(mod.price, sym), width));
     }
   }
 
   parts.push(separator('-', width));
 
   // Totals
-  parts.push(twoColumnLine('Subtotal', formatMoney(data.subtotal), width));
+  parts.push(twoColumnLine('Subtotal (ex-VAT)', formatMoney(data.subtotal, sym), width));
 
   const taxPct = (data.taxRate * 100).toFixed(1);
-  parts.push(twoColumnLine(`Tax (${taxPct}%)`, formatMoney(data.taxAmount), width));
+  parts.push(twoColumnLine(`VAT (${taxPct}%)`, formatMoney(data.taxAmount, sym), width));
 
   parts.push(boldOn());
-  parts.push(twoColumnLine('TOTAL', formatMoney(data.total), width));
+  parts.push(twoColumnLine('TOTAL', formatMoney(data.total, sym), width));
   parts.push(boldOff());
+
+  if (data.tipAmount && data.tipAmount > 0) {
+    parts.push(twoColumnLine('Tip', formatMoney(data.tipAmount, sym), width));
+    parts.push(boldOn());
+    parts.push(twoColumnLine('GRAND TOTAL', formatMoney(data.total + data.tipAmount, sym), width));
+    parts.push(boldOff());
+  }
 
   parts.push(separator('-', width));
 
   // Payment
   parts.push(twoColumnLine('Payment', data.paymentMethod, width));
-  parts.push(twoColumnLine('Tendered', formatMoney(data.amountTendered), width));
+  parts.push(twoColumnLine('Tendered', formatMoney(data.amountTendered, sym), width));
   if (data.changeGiven > 0) {
-    parts.push(twoColumnLine('Change', formatMoney(data.changeGiven), width));
+    parts.push(twoColumnLine('Change', formatMoney(data.changeGiven, sym), width));
   }
 
   // Footer

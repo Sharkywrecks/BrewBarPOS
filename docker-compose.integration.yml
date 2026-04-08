@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: src/BrewBar.API/Dockerfile
+    container_name: brewbar-api-test
+    ports:
+      - "5050:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Desktop
+      DatabaseProvider: Sqlite
+      ConnectionStrings__DefaultConnection: "Data Source=/tmp/brewbar-test.db"
+      ConnectionStrings__IdentityConnection: "Data Source=/tmp/brewbar-test.db"
+      Jwt__Secret: "integration-test-jwt-secret-key-minimum-32-chars!"
+      Jwt__Issuer: BrewBarAPI
+      Jwt__Audience: BrewBarClient
+      AllowedOrigins__0: "http://localhost:4200"
+      AllowedOrigins__1: "http://localhost:4201"
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health/ready || exit 1"]
+      start_period: 10s
+      interval: 5s
+      timeout: 3s
+      retries: 10

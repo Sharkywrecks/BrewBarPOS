@@ -17,9 +17,14 @@
     "kill:processes": "taskkill /f /im \"BrewBar POS.exe\" >nul 2>&1 & taskkill /f /im \"BrewBar.API.exe\" >nul 2>&1 || exit 0",
     "build:desktop": "npm run kill:processes && npm run build:api && npm run build:client && npm run build:copy-wwwroot && npm run build:electron",
     "build:installer": "npm run build:desktop && npm run build:msi",
+    "build:server": "dotnet publish server/src/BrewBar.API/BrewBar.API.csproj -p:PublishProfile=Server -c Release",
+    "build:linux": "bash build-server.sh",
     "clean": "node -e \"fs.rmSync('build',{recursive:true,force:true})\"",
     "dev:api": "cd server/src/BrewBar.API && dotnet run",
     "dev:api:sqlite": "cd server/src/BrewBar.API && dotnet run --environment Desktop",
+    "integration:up": "docker compose -f docker-compose.integration.yml up -d --build --wait",
+    "integration:down": "docker compose -f docker-compose.integration.yml down -v",
+    "integration:test": "npm run integration:up && cd client && npm run e2e:integration; cd .. && npm run integration:down",
     "prepare": "husky"
   },
   "lint-staged": {

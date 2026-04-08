@@ -65,6 +65,31 @@ public class ProductsController : BaseApiController
         return Ok(MapProduct(product));
     }
 
+    [HttpGet("lookup")]
+    public async Task<ActionResult<ProductDto>> LookupProduct(
+        [FromQuery] string? barcode, [FromQuery] string? sku, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(barcode) && string.IsNullOrWhiteSpace(sku))
+            return BadRequest(new ApiResponse(400, "Provide barcode or sku"));
+
+        var query = _unitOfWork.GetQueryable<Product>()
+            .Include(p => p.Category)
+            .Include(p => p.Variants)
+            .Include(p => p.ProductModifiers)
+                .ThenInclude(pm => pm.Modifier)
+                    .ThenInclude(m => m.Options)
+            .AsQueryable();
+
+        Product? product = null;
+        if (!string.IsNullOrWhiteSpace(barcode))
+            product = await query.FirstOrDefaultAsync(p => p.Barcode == barcode, ct);
+        else if (!string.IsNullOrWhiteSpace(sku))
+            product = await query.FirstOrDefaultAsync(p => p.Sku == sku, ct);
+
+        if (product == null) return NotFound(new ApiResponse(404));
+        return Ok(MapProduct(product));
+    }
+
     [HttpPost]
     [Authorize(Roles = Roles.AdminOrManager)]
     public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductDto dto, CancellationToken ct)
@@ -80,7 +105,10 @@ public class ProductsController : BaseApiController
             CategoryId = dto.CategoryId,
             SortOrder = dto.SortOrder,
             IsAvailable = dto.IsAvailable,
-            ImageUrl = dto.ImageUrl
+            ImageUrl = dto.ImageUrl,
+            TaxRate = dto.TaxRate,
+            Barcode = dto.Barcode,
+            Sku = dto.Sku
         };
 
         _unitOfWork.Repository<Product>().Add(product);
@@ -116,6 +144,9 @@ public class ProductsController : BaseApiController
         product.SortOrder = dto.SortOrder;
         product.IsAvailable = dto.IsAvailable;
         product.ImageUrl = dto.ImageUrl;
+        product.TaxRate = dto.TaxRate;
+        product.Barcode = dto.Barcode;
+        product.Sku = dto.Sku;
 
         await _unitOfWork.Complete(ct);
         return Ok(MapProduct(product));
@@ -256,6 +287,9 @@ public class ProductsController : BaseApiController
         SortOrder = p.SortOrder,
         IsAvailable = p.IsAvailable,
         ImageUrl = p.ImageUrl,
+        TaxRate = p.TaxRate,
+        Barcode = p.Barcode,
+        Sku = p.Sku,
         Variants = p.Variants.OrderBy(v => v.SortOrder).Select(v => new ProductVariantDto
         {
             Id = v.Id,

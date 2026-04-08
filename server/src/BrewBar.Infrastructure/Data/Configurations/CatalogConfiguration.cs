@@ -17,6 +17,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
     public void Configure(EntityTypeBuilder<Product> builder)
     {
         builder.Property(p => p.BasePrice).HasPrecision(10, 2);
+        builder.Property(p => p.TaxRate).HasPrecision(5, 4);
+        builder.Property(p => p.Barcode).HasMaxLength(128);
+        builder.HasIndex(p => p.Barcode).IsUnique();
+        builder.Property(p => p.Sku).HasMaxLength(64);
+        builder.HasIndex(p => p.Sku).IsUnique();
         builder.HasMany(p => p.Variants).WithOne(v => v.Product).HasForeignKey(v => v.ProductId);
         builder.HasMany(p => p.ProductModifiers).WithOne(pm => pm.Product).HasForeignKey(pm => pm.ProductId);
     }

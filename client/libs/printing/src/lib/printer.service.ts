@@ -42,7 +42,8 @@ interface UsbApi {
 }
 
 const PRINTER_FILTERS: UsbDeviceFilter[] = [
-  { classCode: 7 }, // Printer class
+  { vendorId: 0x0483, productId: 0x5743 }, // Xepos / Xprinter (STM32-based)
+  { classCode: 7 }, // Generic USB Printer class fallback
 ];
 
 @Injectable({ providedIn: 'root' })
@@ -70,15 +71,29 @@ export class PrinterService {
       await this.device.selectConfiguration(1);
     }
 
-    const iface = this.device.configuration!.interfaces[0];
-    await this.device.claimInterface(iface.interfaceNumber);
+    // Find the interface with a bulk OUT endpoint (scan all, not just index 0)
+    const interfaces = this.device.configuration!.interfaces;
+    let claimedIface: UsbInterface | null = null;
+    let outEp: UsbEndpoint | null = null;
 
-    const alt = iface.alternates[0];
-    const outEndpoint = alt.endpoints.find((e) => e.direction === 'out');
-    if (!outEndpoint) {
+    for (const iface of interfaces) {
+      for (const alt of iface.alternates) {
+        const ep = alt.endpoints.find((e) => e.direction === 'out');
+        if (ep) {
+          claimedIface = iface;
+          outEp = ep;
+          break;
+        }
+      }
+      if (outEp) break;
+    }
+
+    if (!claimedIface || !outEp) {
       throw new Error('No OUT endpoint found on printer');
     }
-    this.endpoint = outEndpoint.endpointNumber;
+
+    await this.device.claimInterface(claimedIface.interfaceNumber);
+    this.endpoint = outEp.endpointNumber;
   }
 
   /** Send raw bytes to the printer */

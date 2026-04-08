@@ -116,7 +116,13 @@ public class OrdersController : BaseApiController
         var lineItems = dto.LineItems.Select(li =>
         {
             var modifierTotal = li.ModifierItems.Sum(m => m.Price);
-            var lineTotal = (li.UnitPrice + modifierTotal) * li.Quantity;
+            // Gross is VAT-inclusive before discount
+            var lineGross = (li.UnitPrice + modifierTotal) * li.Quantity;
+            // Net is VAT-inclusive after line-level discount
+            var lineNet = lineGross - li.DiscountAmount;
+            // Extract VAT from the discounted inclusive price
+            var exVatLineTotal = li.TaxRate > 0 ? Math.Round(lineNet / (1 + li.TaxRate), 2) : lineNet;
+            var lineTaxAmount = lineNet - exVatLineTotal;
 
             return new OrderLineItem
             {
@@ -125,7 +131,13 @@ public class OrdersController : BaseApiController
                 VariantName = li.VariantName,
                 UnitPrice = li.UnitPrice,
                 Quantity = li.Quantity,
-                LineTotal = lineTotal,
+                LineTotal = lineNet,
+                TaxRate = li.TaxRate,
+                TaxAmount = lineTaxAmount,
+                DiscountAmount = li.DiscountAmount,
+                DiscountType = li.DiscountType,
+                DiscountPercent = li.DiscountPercent,
+                DiscountReason = li.DiscountReason,
                 ModifierItems = li.ModifierItems.Select(mi => new OrderModifierItem
                 {
                     ModifierName = mi.ModifierName,
@@ -135,9 +147,27 @@ public class OrdersController : BaseApiController
             };
         }).ToList();
 
-        var subtotal = lineItems.Sum(li => li.LineTotal);
-        var taxAmount = Math.Round(subtotal * dto.TaxRate, 2);
-        var total = subtotal + taxAmount;
+        // Apply order-level discount to the inclusive total
+        var lineInclusiveTotal = lineItems.Sum(li => li.LineTotal);
+        var orderNetInclusive = lineInclusiveTotal - dto.OrderDiscountAmount;
+
+        // Subtotal = sum of ex-VAT line totals, minus ex-VAT portion of order discount
+        var lineExVatTotal = lineItems.Sum(li => li.LineTotal - li.TaxAmount);
+        var lineTaxTotal = lineItems.Sum(li => li.TaxAmount);
+
+        // Distribute order discount proportionally for tax extraction
+        decimal orderDiscountExVat = 0;
+        decimal orderDiscountTax = 0;
+        if (dto.OrderDiscountAmount > 0 && lineInclusiveTotal > 0)
+        {
+            var taxRatio = lineTaxTotal / lineInclusiveTotal;
+            orderDiscountTax = Math.Round(dto.OrderDiscountAmount * taxRatio, 2);
+            orderDiscountExVat = dto.OrderDiscountAmount - orderDiscountTax;
+        }
+
+        var subtotal = lineExVatTotal - orderDiscountExVat;
+        var taxAmount = lineTaxTotal - orderDiscountTax;
+        var total = orderNetInclusive;
 
         var order = new Order
         {
@@ -148,10 +178,15 @@ public class OrdersController : BaseApiController
             TaxAmount = taxAmount,
             TaxRate = dto.TaxRate,
             Total = total,
+            OrderDiscountAmount = dto.OrderDiscountAmount,
+            OrderDiscountType = dto.OrderDiscountType,
+            OrderDiscountPercent = dto.OrderDiscountPercent,
+            OrderDiscountReason = dto.OrderDiscountReason,
             Notes = dto.Notes,
             CashierId = userId,
             CashierName = userName,
             TerminalId = dto.TerminalId,
+            RegisterShiftId = dto.RegisterShiftId,
             LineItems = lineItems
         };
 
@@ -163,7 +198,7 @@ public class OrdersController : BaseApiController
 
     [HttpPost("{id}/void")]
     [Authorize(Roles = Roles.AdminOrManager)]
-    public async Task<ActionResult<OrderDto>> VoidOrder(int id, CancellationToken ct)
+    public async Task<ActionResult<OrderDto>> VoidOrder(int id, VoidOrderDto dto, CancellationToken ct)
     {
         var order = await _unitOfWork.GetQueryable<Order>()
             .Include(o => o.LineItems).ThenInclude(li => li.ModifierItems)
@@ -172,7 +207,14 @@ public class OrdersController : BaseApiController
         if (order == null) return NotFound(new ApiResponse(404));
         if (order.Status == OrderStatus.Voided) return BadRequest(new ApiResponse(400, "Order is already voided"));
 
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        var userName = User.FindFirstValue(ClaimTypes.Name);
+
         order.Status = OrderStatus.Voided;
+        order.VoidReason = dto.Reason;
+        order.VoidedByUserId = userId;
+        order.VoidedByUserName = userName;
+        order.VoidedAtUtc = DateTime.UtcNow;
         await _unitOfWork.Complete(ct);
 
         return Ok(MapOrder(order, null));
@@ -188,10 +230,17 @@ public class OrdersController : BaseApiController
         TaxAmount = o.TaxAmount,
         TaxRate = o.TaxRate,
         Total = o.Total,
+        OrderDiscountAmount = o.OrderDiscountAmount,
+        OrderDiscountType = o.OrderDiscountType,
+        OrderDiscountPercent = o.OrderDiscountPercent,
+        OrderDiscountReason = o.OrderDiscountReason,
         Notes = o.Notes,
         CashierId = o.CashierId,
         CashierName = o.CashierName,
         TerminalId = o.TerminalId,
+        VoidReason = o.VoidReason,
+        VoidedByUserName = o.VoidedByUserName,
+        VoidedAtUtc = o.VoidedAtUtc,
         CreatedAtUtc = o.CreatedAtUtc,
         LineItems = o.LineItems.Select(li => new OrderLineItemDto
         {
@@ -202,6 +251,12 @@ public class OrdersController : BaseApiController
             UnitPrice = li.UnitPrice,
             Quantity = li.Quantity,
             LineTotal = li.LineTotal,
+            TaxRate = li.TaxRate,
+            TaxAmount = li.TaxAmount,
+            DiscountAmount = li.DiscountAmount,
+            DiscountType = li.DiscountType,
+            DiscountPercent = li.DiscountPercent,
+            DiscountReason = li.DiscountReason,
             ModifierItems = li.ModifierItems.Select(mi => new OrderModifierItemDto
             {
                 ModifierName = mi.ModifierName,
@@ -216,7 +271,8 @@ public class OrdersController : BaseApiController
             Status = p.Status,
             AmountTendered = p.AmountTendered,
             ChangeGiven = p.ChangeGiven,
-            Total = p.Total
+            Total = p.Total,
+            TipAmount = p.TipAmount
         }).ToList() ?? new List<PaymentSummaryDto>()
     };
 }

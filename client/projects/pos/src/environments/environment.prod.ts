@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
-  taxRate: 0.0875,
+  apiUrl: '',
+  taxRate: 0.15,
   storeName: 'BrewBar',
 };

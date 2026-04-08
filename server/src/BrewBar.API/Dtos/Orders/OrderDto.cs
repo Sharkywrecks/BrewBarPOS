@@ -12,10 +12,17 @@ public class OrderDto
     public decimal TaxAmount { get; set; }
     public decimal TaxRate { get; set; }
     public decimal Total { get; set; }
+    public decimal OrderDiscountAmount { get; set; }
+    public DiscountType? OrderDiscountType { get; set; }
+    public decimal? OrderDiscountPercent { get; set; }
+    public string? OrderDiscountReason { get; set; }
     public string? Notes { get; set; }
     public string CashierId { get; set; } = string.Empty;
     public string? CashierName { get; set; }
     public int? TerminalId { get; set; }
+    public string? VoidReason { get; set; }
+    public string? VoidedByUserName { get; set; }
+    public DateTime? VoidedAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public IList<OrderLineItemDto> LineItems { get; set; } = new List<OrderLineItemDto>();
     public IList<PaymentSummaryDto> Payments { get; set; } = new List<PaymentSummaryDto>();
@@ -30,6 +37,12 @@ public class OrderLineItemDto
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
     public decimal LineTotal { get; set; }
+    public decimal TaxRate { get; set; }
+    public decimal TaxAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public DiscountType? DiscountType { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public string? DiscountReason { get; set; }
     public IList<OrderModifierItemDto> ModifierItems { get; set; } = new List<OrderModifierItemDto>();
 }
 
@@ -48,14 +61,20 @@ public class PaymentSummaryDto
     public decimal AmountTendered { get; set; }
     public decimal ChangeGiven { get; set; }
     public decimal Total { get; set; }
+    public decimal TipAmount { get; set; }
 }
 
 public class CreateOrderDto
 {
     public Guid? LocalId { get; set; }
     public decimal TaxRate { get; set; }
+    public decimal OrderDiscountAmount { get; set; }
+    public DiscountType? OrderDiscountType { get; set; }
+    public decimal? OrderDiscountPercent { get; set; }
+    public string? OrderDiscountReason { get; set; }
     public string? Notes { get; set; }
     public int? TerminalId { get; set; }
+    public int? RegisterShiftId { get; set; }
     public IList<CreateOrderLineItemDto> LineItems { get; set; } = new List<CreateOrderLineItemDto>();
 }
 
@@ -66,6 +85,11 @@ public class CreateOrderLineItemDto
     public string? VariantName { get; set; }
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; } = 1;
+    public decimal TaxRate { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public DiscountType? DiscountType { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public string? DiscountReason { get; set; }
     public IList<CreateOrderModifierItemDto> ModifierItems { get; set; } = new List<CreateOrderModifierItemDto>();
 }
 

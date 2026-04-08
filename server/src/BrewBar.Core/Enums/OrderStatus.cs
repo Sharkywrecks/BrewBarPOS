@@ -4,5 +4,6 @@ public enum OrderStatus
 {
     Open,
     Completed,
-    Voided
+    Voided,
+    Refunded
 }

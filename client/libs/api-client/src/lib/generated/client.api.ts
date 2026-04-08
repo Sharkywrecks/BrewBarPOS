@@ -21,6 +21,7 @@ export interface IClient {
   auth_PinLogin(dto: PinLoginDto): Observable<UserDto>;
   auth_Register(dto: RegisterDto): Observable<UserDto>;
   auth_GetCurrentUser(): Observable<UserDto>;
+  auth_GetStaff(): Observable<StaffDto[]>;
   auth_GetUsers(): Observable<UserDto[]>;
   categories_GetCategories(activeOnly?: boolean | undefined): Observable<CategoryDto[]>;
   categories_CreateCategory(dto: CreateCategoryDto): Observable<CategoryDto>;
@@ -54,11 +55,12 @@ export interface IClient {
   orders_CreateOrder(dto: CreateOrderDto): Observable<OrderDto>;
   orders_GetOrder(id: number): Observable<OrderDto>;
   orders_GetOrderByLocalId(localId: string): Observable<OrderDto>;
-  orders_VoidOrder(id: number): Observable<OrderDto>;
+  orders_VoidOrder(id: number, dto: VoidOrderDto): Observable<OrderDto>;
   payments_CreatePayment(dto: CreatePaymentDto): Observable<PaymentDto>;
   payments_GetPayment(id: number): Observable<PaymentDto>;
   payments_GetPaymentsByOrder(orderId: number): Observable<PaymentDto[]>;
-  payments_RefundPayment(id: number): Observable<PaymentDto>;
+  payments_CreateRefund(dto: CreateRefundDto): Observable<RefundDto>;
+  payments_GetRefundsByOrder(orderId: number): Observable<RefundDto[]>;
   products_GetProducts(
     categoryId?: number | null | undefined,
     availableOnly?: boolean | undefined,
@@ -69,6 +71,10 @@ export interface IClient {
   products_GetProduct(id: number): Observable<ProductDto>;
   products_UpdateProduct(id: number, dto: UpdateProductDto): Observable<ProductDto>;
   products_DeleteProduct(id: number): Observable<FileResponse>;
+  products_LookupProduct(
+    barcode?: string | null | undefined,
+    sku?: string | null | undefined,
+  ): Observable<ProductDto>;
   products_CreateVariant(
     productId: number,
     dto: CreateProductVariantDto,
@@ -97,6 +103,17 @@ export interface IClient {
   ): Observable<PaymentSummaryReportDto>;
   settings_GetSettings(): Observable<BusinessSettingsDto>;
   settings_UpdateSettings(dto: UpdateBusinessSettingsDto): Observable<BusinessSettingsDto>;
+  shifts_OpenShift(dto: OpenShiftDto): Observable<RegisterShiftDto>;
+  shifts_CloseShift(id: number, dto: CloseShiftDto): Observable<RegisterShiftDto>;
+  shifts_AddCashDrop(id: number, dto: CreateCashDropDto): Observable<CashDropDto>;
+  shifts_GetCurrentShift(terminalId?: number | undefined): Observable<RegisterShiftDto>;
+  shifts_GetShift(id: number): Observable<RegisterShiftDto>;
+  shifts_GetShiftReport(id: number): Observable<ShiftReportDto>;
+  shifts_GetShifts(
+    terminalId?: number | null | undefined,
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<RegisterShiftDto[]>;
 }
 
 @Injectable()
@@ -506,6 +523,89 @@ export class Client implements IClient {
           } else {
             try {
               result200 = JSON.parse(_responseText, this.jsonParseReviver) as UserDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  auth_GetStaff(): Observable<StaffDto[]> {
+    let url_ = this.baseUrl + '/api/Auth/staff';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processAuth_GetStaff(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processAuth_GetStaff(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<StaffDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<StaffDto[]>;
+        }),
+      );
+  }
+
+  protected processAuth_GetStaff(response: HttpResponseBase): Observable<StaffDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as StaffDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as StaffDto[];
             } catch (e) {
               throw new Error('Failed to parse JSON response: ' + _responseText);
             }
@@ -2322,16 +2422,20 @@ export class Client implements IClient {
     return _observableOf(null as any);
   }
 
-  orders_VoidOrder(id: number): Observable<OrderDto> {
+  orders_VoidOrder(id: number, dto: VoidOrderDto): Observable<OrderDto> {
     let url_ = this.baseUrl + '/api/Orders/{id}/void';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
     url_ = url_.replace(/[?&]$/, '');
 
+    const content_ = JSON.stringify(dto);
+
     let options_: any = {
+      body: content_,
       observe: 'response',
       responseType: 'json',
       headers: new HttpHeaders({
+        'Content-Type': 'application/json',
         Accept: 'application/json',
       }),
     };
@@ -2667,16 +2771,18 @@ export class Client implements IClient {
     return _observableOf(null as any);
   }
 
-  payments_RefundPayment(id: number): Observable<PaymentDto> {
-    let url_ = this.baseUrl + '/api/Payments/{id}/refund';
-    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
-    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+  payments_CreateRefund(dto: CreateRefundDto): Observable<RefundDto> {
+    let url_ = this.baseUrl + '/api/Payments/refund';
     url_ = url_.replace(/[?&]$/, '');
 
+    const content_ = JSON.stringify(dto);
+
     let options_: any = {
+      body: content_,
       observe: 'response',
       responseType: 'json',
       headers: new HttpHeaders({
+        'Content-Type': 'application/json',
         Accept: 'application/json',
       }),
     };
@@ -2685,27 +2791,27 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processPayments_RefundPayment(response_);
+          return this.processPayments_CreateRefund(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processPayments_RefundPayment(response_ as any);
+              return this.processPayments_CreateRefund(response_ as any);
             } catch (e) {
-              return _observableThrow(e) as any as Observable<PaymentDto>;
+              return _observableThrow(e) as any as Observable<RefundDto>;
             }
-          } else return _observableThrow(response_) as any as Observable<PaymentDto>;
+          } else return _observableThrow(response_) as any as Observable<RefundDto>;
         }),
       );
   }
 
-  protected processPayments_RefundPayment(response: HttpResponseBase): Observable<PaymentDto> {
+  protected processPayments_CreateRefund(response: HttpResponseBase): Observable<RefundDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
-      return _observableOf(response.body as PaymentDto);
+      return _observableOf(response.body as RefundDto);
     }
 
     const responseBlob =
@@ -2729,7 +2835,93 @@ export class Client implements IClient {
             result200 = null;
           } else {
             try {
-              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PaymentDto;
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RefundDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  payments_GetRefundsByOrder(orderId: number): Observable<RefundDto[]> {
+    let url_ = this.baseUrl + '/api/Payments/refunds/by-order/{orderId}';
+    if (orderId === undefined || orderId === null)
+      throw new Error("The parameter 'orderId' must be defined.");
+    url_ = url_.replace('{orderId}', encodeURIComponent('' + orderId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPayments_GetRefundsByOrder(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPayments_GetRefundsByOrder(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RefundDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RefundDto[]>;
+        }),
+      );
+  }
+
+  protected processPayments_GetRefundsByOrder(response: HttpResponseBase): Observable<RefundDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RefundDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RefundDto[];
             } catch (e) {
               throw new Error('Failed to parse JSON response: ' + _responseText);
             }
@@ -3195,6 +3387,95 @@ export class Client implements IClient {
         status: status,
         headers: _headers,
       });
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  products_LookupProduct(
+    barcode?: string | null | undefined,
+    sku?: string | null | undefined,
+  ): Observable<ProductDto> {
+    let url_ = this.baseUrl + '/api/Products/lookup?';
+    if (barcode !== undefined && barcode !== null)
+      url_ += 'barcode=' + encodeURIComponent('' + barcode) + '&';
+    if (sku !== undefined && sku !== null) url_ += 'sku=' + encodeURIComponent('' + sku) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processProducts_LookupProduct(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processProducts_LookupProduct(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<ProductDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<ProductDto>;
+        }),
+      );
+  }
+
+  protected processProducts_LookupProduct(response: HttpResponseBase): Observable<ProductDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as ProductDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as ProductDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
     } else if (status !== 200 && status !== 204) {
       return blobToText(responseBlob).pipe(
         _observableMergeMap((_responseText: string) => {
@@ -4243,6 +4524,622 @@ export class Client implements IClient {
     }
     return _observableOf(null as any);
   }
+
+  shifts_OpenShift(dto: OpenShiftDto): Observable<RegisterShiftDto> {
+    let url_ = this.baseUrl + '/api/Shifts/open';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(dto);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_OpenShift(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_OpenShift(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RegisterShiftDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RegisterShiftDto>;
+        }),
+      );
+  }
+
+  protected processShifts_OpenShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RegisterShiftDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RegisterShiftDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_CloseShift(id: number, dto: CloseShiftDto): Observable<RegisterShiftDto> {
+    let url_ = this.baseUrl + '/api/Shifts/{id}/close';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(dto);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_CloseShift(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_CloseShift(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RegisterShiftDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RegisterShiftDto>;
+        }),
+      );
+  }
+
+  protected processShifts_CloseShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RegisterShiftDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RegisterShiftDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_AddCashDrop(id: number, dto: CreateCashDropDto): Observable<CashDropDto> {
+    let url_ = this.baseUrl + '/api/Shifts/{id}/cash-drop';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(dto);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_AddCashDrop(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_AddCashDrop(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<CashDropDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<CashDropDto>;
+        }),
+      );
+  }
+
+  protected processShifts_AddCashDrop(response: HttpResponseBase): Observable<CashDropDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as CashDropDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as CashDropDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_GetCurrentShift(terminalId?: number | undefined): Observable<RegisterShiftDto> {
+    let url_ = this.baseUrl + '/api/Shifts/current?';
+    if (terminalId === null) throw new Error("The parameter 'terminalId' cannot be null.");
+    else if (terminalId !== undefined)
+      url_ += 'terminalId=' + encodeURIComponent('' + terminalId) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_GetCurrentShift(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_GetCurrentShift(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RegisterShiftDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RegisterShiftDto>;
+        }),
+      );
+  }
+
+  protected processShifts_GetCurrentShift(
+    response: HttpResponseBase,
+  ): Observable<RegisterShiftDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RegisterShiftDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RegisterShiftDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_GetShift(id: number): Observable<RegisterShiftDto> {
+    let url_ = this.baseUrl + '/api/Shifts/{id}';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_GetShift(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_GetShift(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RegisterShiftDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RegisterShiftDto>;
+        }),
+      );
+  }
+
+  protected processShifts_GetShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RegisterShiftDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RegisterShiftDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_GetShiftReport(id: number): Observable<ShiftReportDto> {
+    let url_ = this.baseUrl + '/api/Shifts/{id}/report';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_GetShiftReport(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_GetShiftReport(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<ShiftReportDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<ShiftReportDto>;
+        }),
+      );
+  }
+
+  protected processShifts_GetShiftReport(response: HttpResponseBase): Observable<ShiftReportDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as ShiftReportDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as ShiftReportDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  shifts_GetShifts(
+    terminalId?: number | null | undefined,
+    from?: Date | null | undefined,
+    to?: Date | null | undefined,
+  ): Observable<RegisterShiftDto[]> {
+    let url_ = this.baseUrl + '/api/Shifts?';
+    if (terminalId !== undefined && terminalId !== null)
+      url_ += 'terminalId=' + encodeURIComponent('' + terminalId) + '&';
+    if (from !== undefined && from !== null)
+      url_ += 'from=' + encodeURIComponent(from ? '' + from.toISOString() : '') + '&';
+    if (to !== undefined && to !== null)
+      url_ += 'to=' + encodeURIComponent(to ? '' + to.toISOString() : '') + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processShifts_GetShifts(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processShifts_GetShifts(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<RegisterShiftDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<RegisterShiftDto[]>;
+        }),
+      );
+  }
+
+  protected processShifts_GetShifts(response: HttpResponseBase): Observable<RegisterShiftDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as RegisterShiftDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as RegisterShiftDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
 }
 
 export interface UserDto {
@@ -4270,6 +5167,11 @@ export interface RegisterDto {
   role: string;
 }
 
+export interface StaffDto {
+  id?: string;
+  displayName?: string;
+}
+
 export interface CategoryDto {
   id?: number;
   name?: string;
@@ -4293,6 +5195,9 @@ export interface ProductDto {
   sortOrder?: number;
   isAvailable?: boolean;
   imageUrl?: string | null;
+  taxRate?: number | null;
+  barcode?: string | null;
+  sku?: string | null;
   variants?: ProductVariantDto[];
   modifiers?: ProductModifierDto[];
 }
@@ -4395,10 +5300,17 @@ export interface OrderDto {
   taxAmount?: number;
   taxRate?: number;
   total?: number;
+  orderDiscountAmount?: number;
+  orderDiscountType?: DiscountType | null;
+  orderDiscountPercent?: number | null;
+  orderDiscountReason?: string | null;
   notes?: string | null;
   cashierId?: string;
   cashierName?: string | null;
   terminalId?: number | null;
+  voidReason?: string | null;
+  voidedByUserName?: string | null;
+  voidedAtUtc?: Date | null;
   createdAtUtc?: Date;
   lineItems?: OrderLineItemDto[];
   payments?: PaymentSummaryDto[];
@@ -4408,6 +5320,12 @@ export enum OrderStatus {
   Open = 0,
   Completed = 1,
   Voided = 2,
+  Refunded = 3,
+}
+
+export enum DiscountType {
+  Percentage = 0,
+  FixedAmount = 1,
 }
 
 export interface OrderLineItemDto {
@@ -4418,6 +5336,12 @@ export interface OrderLineItemDto {
   unitPrice?: number;
   quantity?: number;
   lineTotal?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  discountType?: DiscountType | null;
+  discountPercent?: number | null;
+  discountReason?: string | null;
   modifierItems?: OrderModifierItemDto[];
 }
 
@@ -4434,6 +5358,7 @@ export interface PaymentSummaryDto {
   amountTendered?: number;
   changeGiven?: number;
   total?: number;
+  tipAmount?: number;
 }
 
 export enum PaymentMethod {
@@ -4451,8 +5376,13 @@ export enum PaymentStatus {
 export interface CreateOrderDto {
   localId?: string | null;
   taxRate?: number;
+  orderDiscountAmount?: number;
+  orderDiscountType?: DiscountType | null;
+  orderDiscountPercent?: number | null;
+  orderDiscountReason?: string | null;
   notes?: string | null;
   terminalId?: number | null;
+  registerShiftId?: number | null;
   lineItems?: CreateOrderLineItemDto[];
 }
 
@@ -4462,6 +5392,11 @@ export interface CreateOrderLineItemDto {
   variantName?: string | null;
   unitPrice?: number;
   quantity?: number;
+  taxRate?: number;
+  discountAmount?: number;
+  discountType?: DiscountType | null;
+  discountPercent?: number | null;
+  discountReason?: string | null;
   modifierItems?: CreateOrderModifierItemDto[];
 }
 
@@ -4469,6 +5404,10 @@ export interface CreateOrderModifierItemDto {
   modifierName?: string;
   optionName?: string;
   price?: number;
+}
+
+export interface VoidOrderDto {
+  reason?: string;
 }
 
 export interface PaymentDto {
@@ -4479,6 +5418,7 @@ export interface PaymentDto {
   amountTendered?: number;
   changeGiven?: number;
   total?: number;
+  tipAmount?: number;
   createdAtUtc?: Date;
 }
 
@@ -4487,6 +5427,38 @@ export interface CreatePaymentDto {
   method?: PaymentMethod;
   amountTendered?: number;
   total?: number;
+  tipAmount?: number;
+}
+
+export interface RefundDto {
+  id?: number;
+  orderId?: number;
+  originalPaymentId?: number;
+  amount?: number;
+  reason?: string;
+  performedByUserName?: string | null;
+  isFullRefund?: boolean;
+  createdAtUtc?: Date;
+  lineItems?: RefundLineItemDto[];
+}
+
+export interface RefundLineItemDto {
+  orderLineItemId?: number;
+  quantity?: number;
+  amount?: number;
+}
+
+export interface CreateRefundDto {
+  orderId?: number;
+  originalPaymentId?: number;
+  reason?: string;
+  isFullRefund?: boolean;
+  lineItems?: CreateRefundLineItemDto[] | null;
+}
+
+export interface CreateRefundLineItemDto {
+  orderLineItemId?: number;
+  quantity?: number;
 }
 
 export interface PaginationOfProductDto {
@@ -4504,6 +5476,9 @@ export interface CreateProductDto {
   sortOrder?: number;
   isAvailable?: boolean;
   imageUrl?: string | null;
+  taxRate?: number | null;
+  barcode?: string | null;
+  sku?: string | null;
 }
 
 export interface UpdateProductDto {
@@ -4514,6 +5489,9 @@ export interface UpdateProductDto {
   sortOrder?: number;
   isAvailable?: boolean;
   imageUrl?: string | null;
+  taxRate?: number | null;
+  barcode?: string | null;
+  sku?: string | null;
 }
 
 export interface CreateProductVariantDto {
@@ -4589,14 +5567,88 @@ export interface BusinessSettingsDto {
   storeName?: string;
   storeInfo?: string | null;
   taxRate?: number;
-  currencyCode?: string;
+  currency?: Currency;
+  discountApprovalThreshold?: number;
+}
+
+export enum Currency {
+  SCR = 0,
+  USD = 1,
+  EUR = 2,
+  GBP = 3,
+  AED = 4,
 }
 
 export interface UpdateBusinessSettingsDto {
   storeName?: string;
   storeInfo?: string | null;
   taxRate?: number;
-  currencyCode?: string;
+  currency?: Currency;
+  discountApprovalThreshold?: number;
+}
+
+export interface RegisterShiftDto {
+  id?: number;
+  terminalId?: number;
+  cashierId?: string;
+  cashierName?: string | null;
+  status?: ShiftStatus;
+  openingCashAmount?: number;
+  closingCashAmount?: number | null;
+  expectedCashAmount?: number | null;
+  cashOverShort?: number | null;
+  openedAtUtc?: Date;
+  closedAtUtc?: Date | null;
+  closeNotes?: string | null;
+  cashDrops?: CashDropDto[];
+}
+
+export enum ShiftStatus {
+  Open = 0,
+  Closed = 1,
+}
+
+export interface CashDropDto {
+  id?: number;
+  amount?: number;
+  reason?: string | null;
+  performedByUserName?: string | null;
+  createdAtUtc?: Date;
+}
+
+export interface OpenShiftDto {
+  terminalId?: number;
+  openingCashAmount?: number;
+}
+
+export interface CloseShiftDto {
+  closingCashAmount?: number;
+  closeNotes?: string | null;
+}
+
+export interface CreateCashDropDto {
+  amount?: number;
+  reason?: string | null;
+}
+
+export interface ShiftReportDto {
+  shiftId?: number;
+  cashierName?: string | null;
+  openedAtUtc?: Date;
+  closedAtUtc?: Date | null;
+  openingCash?: number;
+  cashSales?: number;
+  cardSales?: number;
+  totalSales?: number;
+  taxCollected?: number;
+  tipTotal?: number;
+  refundTotal?: number;
+  discountTotal?: number;
+  cashDropTotal?: number;
+  expectedCash?: number;
+  actualCash?: number | null;
+  overShort?: number | null;
+  orderCount?: number;
 }
 
 export interface FileParameter {
