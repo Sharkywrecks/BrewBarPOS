@@ -209,6 +209,94 @@ public class AuthController : BaseApiController
         return Ok(result);
     }
 
+    [HttpPut("users/{id}")]
+    [Authorize(Policy = Policies.RequireAdmin)]
+    public async Task<ActionResult<UserDto>> UpdateUser(string id, UpdateUserDto dto, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null) return NotFound(new ApiResponse(404));
+
+        var validRoles = new[] { Roles.Admin, Roles.Manager, Roles.Cashier };
+        if (!validRoles.Contains(dto.Role))
+            return BadRequest(new ApiResponse(400, "Invalid role"));
+
+        // Reject email collisions against *other* users.
+        var existing = await _userManager.FindByEmailAsync(dto.Email);
+        if (existing != null && existing.Id != user.Id)
+            return BadRequest(new ApiResponse(400, "Email is already in use"));
+
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var wasAdmin = currentRoles.Contains(Roles.Admin);
+        var willBeAdmin = dto.Role == Roles.Admin;
+
+        // Block demoting the last remaining admin — would lock the system out of admin endpoints.
+        if (wasAdmin && !willBeAdmin)
+        {
+            var adminCount = (await _userManager.GetUsersInRoleAsync(Roles.Admin)).Count;
+            if (adminCount <= 1)
+                return BadRequest(new ApiResponse(400, "Cannot demote the last admin"));
+        }
+
+        user.DisplayName = dto.DisplayName;
+        user.Email = dto.Email;
+        user.UserName = dto.Email;
+
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", updateResult.Errors.Select(e => e.Description))));
+
+        if (currentRoles.Count > 0)
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+        await _userManager.AddToRoleAsync(user, dto.Role);
+
+        return await CreateUserDto(user, AuthClaims.AuthMethodPassword, ct);
+    }
+
+    [HttpPost("users/{id}/reset-pin")]
+    [Authorize(Policy = Policies.RequireAdmin)]
+    public async Task<IActionResult> ResetPin(string id, ResetPinDto dto, CancellationToken ct)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null) return NotFound(new ApiResponse(404));
+
+        user.PinHash = _passwordHasher.HashPassword(user, dto.Pin);
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", result.Errors.Select(e => e.Description))));
+
+        // Clear lockout state so a previously-locked staff member can sign back in immediately.
+        await _userManager.ResetAccessFailedCountAsync(user);
+        _logger.LogInformation("PIN reset for {UserId} by {Caller}", user.Id, User.FindFirstValue(ClaimTypes.NameIdentifier));
+        return NoContent();
+    }
+
+    [HttpDelete("users/{id}")]
+    [Authorize(Policy = Policies.RequireAdmin)]
+    public async Task<IActionResult> DeleteUser(string id, CancellationToken ct)
+    {
+        var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (callerId == id)
+            return BadRequest(new ApiResponse(400, "You cannot delete your own account"));
+
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null) return NotFound(new ApiResponse(404));
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains(Roles.Admin))
+        {
+            var adminCount = (await _userManager.GetUsersInRoleAsync(Roles.Admin)).Count;
+            if (adminCount <= 1)
+                return BadRequest(new ApiResponse(400, "Cannot delete the last admin"));
+        }
+
+        var result = await _userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", result.Errors.Select(e => e.Description))));
+
+        _logger.LogInformation("User {UserId} deleted by {Caller}", id, callerId);
+        return NoContent();
+    }
+
     private async Task<UserDto> CreateUserDto(AppUser user, string authMethod, CancellationToken ct)
     {
         var roles = await _userManager.GetRolesAsync(user);

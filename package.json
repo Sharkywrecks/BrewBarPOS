@@ -9,7 +9,7 @@
     "install:all": "npm run install:client && npm run install:desktop",
     "build:api": "dotnet publish server/src/BrewBar.API/BrewBar.API.csproj -p:PublishProfile=Desktop -c Release",
     "build:pos": "cd client && npx ng build pos --configuration production",
-    "build:admin": "cd client && npx ng build admin --configuration production --base-href /admin/",
+    "build:admin": "cd client && npx ng build admin --configuration production",
     "build:client": "npm run build:pos && npm run build:admin",
     "build:copy-wwwroot": "node scripts/copy-wwwroot.js",
     "build:electron": "cd desktop && npm install && npx electron-builder --win --config electron-builder.yml",

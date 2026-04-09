@@ -24,6 +24,7 @@
             "browser": "projects/admin/src/main.ts",
             "tsConfig": "projects/admin/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "baseHref": "/admin/",
             "assets": [
               {
                 "glob": "**/*",

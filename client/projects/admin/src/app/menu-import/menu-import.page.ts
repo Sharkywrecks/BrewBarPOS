@@ -1,22 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { API_BASE_URL } from 'api-client';
-
-interface MenuImportResult {
-  categoriesCreated: number;
-  productsCreated: number;
-  productsUpdated: number;
-  modifiersCreated: number;
-  modifiersUpdated: number;
-  productModifierLinksCreated: number;
-  errors: string[];
-}
+import { CLIENT_TOKEN, FileResponse, IClient, MenuImportResult } from 'api-client';
 
 @Component({
   selector: 'app-menu-import',
@@ -117,14 +107,14 @@ interface MenuImportResult {
             </div>
           </div>
 
-          @if (r.errors.length > 0) {
+          @if ((r.errors?.length ?? 0) > 0) {
             <div class="errors">
               <h3>
                 <mat-icon class="warn">warning</mat-icon>
-                {{ r.errors.length }} warning(s)
+                {{ r.errors!.length }} warning(s)
               </h3>
               <ul>
-                @for (e of r.errors; track e) {
+                @for (e of r.errors!; track e) {
                   <li>{{ e }}</li>
                 }
               </ul>
@@ -208,8 +198,7 @@ interface MenuImportResult {
   ],
 })
 export class MenuImportPage {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = inject(API_BASE_URL);
+  private readonly client = inject<IClient>(CLIENT_TOKEN);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly uploading = signal(false);
@@ -219,16 +208,9 @@ export class MenuImportPage {
   async exportCatalog(): Promise<void> {
     this.exporting.set(true);
     try {
-      const blob = await firstValueFrom(
-        this.http.get(`${this.baseUrl}/api/MenuImport/export`, { responseType: 'blob' }),
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const file = await firstValueFrom(this.client.menuImport_Export());
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      a.href = url;
-      a.download = `menu-export-${stamp}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+      this.saveFile(file, `menu-export-${stamp}.xlsx`);
     } catch {
       this.snackBar.open('Failed to export catalog', 'Dismiss', { duration: 4000 });
     } finally {
@@ -238,15 +220,8 @@ export class MenuImportPage {
 
   async downloadTemplate(): Promise<void> {
     try {
-      const blob = await firstValueFrom(
-        this.http.get(`${this.baseUrl}/api/MenuImport/template`, { responseType: 'blob' }),
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'menu-template.xlsx';
-      a.click();
-      URL.revokeObjectURL(url);
+      const file = await firstValueFrom(this.client.menuImport_GetTemplate());
+      this.saveFile(file, 'menu-template.xlsx');
     } catch {
       this.snackBar.open('Failed to download template', 'Dismiss', { duration: 4000 });
     }
@@ -266,12 +241,9 @@ export class MenuImportPage {
     this.uploading.set(true);
     this.result.set(null);
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
       const res = await firstValueFrom(
-        this.http.post<MenuImportResult>(`${this.baseUrl}/api/MenuImport`, formData),
+        this.client.menuImport_Import({ data: file, fileName: file.name }),
       );
       this.result.set(res);
       this.snackBar.open('Menu imported successfully', 'Dismiss', { duration: 3000 });
@@ -284,5 +256,14 @@ export class MenuImportPage {
     } finally {
       this.uploading.set(false);
     }
+  }
+
+  private saveFile(file: FileResponse, fallbackName: string): void {
+    const url = URL.createObjectURL(file.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.fileName ?? fallbackName;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }

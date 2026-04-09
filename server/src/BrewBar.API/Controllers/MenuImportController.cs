@@ -52,9 +52,15 @@ public class MenuImportController : BaseApiController
     /// Export the current catalog as an .xlsx workbook with Id columns populated.
     /// Re-uploading the exported file will update existing records rather than create duplicates.
     /// </summary>
+    // Explicit FileContentResult return + [Produces] attribute is what makes
+    // NSwag's `operation.IsFile` flag true, so the generated TypeScript client
+    // emits `responseType: 'blob'` and a typed `FileResponse` instead of
+    // `responseType: 'json'` + `Observable<void>` (which silently corrupts xlsx).
     [HttpGet("export")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Export(CancellationToken ct)
+    [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<FileContentResult> Export(CancellationToken ct)
     {
         var service = new MenuImportService(_context);
         var bytes = await service.ExportAsync(ct);
@@ -67,6 +73,9 @@ public class MenuImportController : BaseApiController
     /// </summary>
     [HttpGet("template")]
     [AllowAnonymous]
+    [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult GetTemplate()
     {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "Resources", "menu-template.xlsx");

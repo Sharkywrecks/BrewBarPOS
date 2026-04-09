@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { MAT_BOTTOM_SHEET_DATA, MatBottomSheetRef } from '@angular/material/bottom-sheet';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -68,7 +68,9 @@ interface ModifierSelection {
                 <mat-radio-button [value]="opt.id" class="modifier-option">
                   {{ opt.name }}
                   @if (opt.price) {
-                    <span class="option-price">+{{ opt.price | appCurrency }}</span>
+                    <span class="option-price" [class.discount]="opt.price! < 0">
+                      {{ opt.price! < 0 ? '−' : '+' }}{{ absPrice(opt.price) | appCurrency }}
+                    </span>
                   }
                 </mat-radio-button>
               }
@@ -83,7 +85,9 @@ interface ModifierSelection {
                 >
                   {{ opt.name }}
                   @if (opt.price) {
-                    <span class="option-price">+{{ opt.price | appCurrency }}</span>
+                    <span class="option-price" [class.discount]="opt.price! < 0">
+                      {{ opt.price! < 0 ? '−' : '+' }}{{ absPrice(opt.price) | appCurrency }}
+                    </span>
                   }
                 </mat-checkbox>
               }
@@ -111,8 +115,8 @@ interface ModifierSelection {
     `
       .sheet-content {
         padding: 16px;
-        max-height: 80vh;
-        overflow-y: auto;
+        min-width: 320px;
+        max-width: 480px;
       }
       .product-name {
         font-size: 20px;
@@ -144,8 +148,13 @@ interface ModifierSelection {
         font-size: 15px;
       }
       .option-price {
-        opacity: 0.6;
-        margin-left: 4px;
+        opacity: 0.7;
+        margin-left: 6px;
+        font-weight: 500;
+      }
+      .option-price.discount {
+        color: var(--mat-sys-tertiary, #2e7d32);
+        opacity: 1;
       }
       .sheet-actions {
         display: flex;
@@ -163,8 +172,8 @@ interface ModifierSelection {
   ],
 })
 export class ModifierSheetComponent {
-  protected readonly data = inject<ModifierSheetData>(MAT_BOTTOM_SHEET_DATA);
-  private readonly sheetRef = inject(MatBottomSheetRef);
+  protected readonly data = inject<ModifierSheetData>(MAT_DIALOG_DATA);
+  private readonly sheetRef = inject(MatDialogRef<ModifierSheetComponent, CartLineItem>);
   private readonly settingsService = inject(SettingsService);
 
   protected selectedVariantId = signal<number | null>(null);
@@ -195,6 +204,10 @@ export class ModifierSheetComponent {
     return price;
   });
 
+  protected absPrice(price: number | null | undefined): number {
+    return Math.abs(price ?? 0);
+  }
+
   protected isMultiSelected(modifierId: number, optionId: number): boolean {
     return this.multiSelections()[modifierId]?.has(optionId) ?? false;
   }
@@ -213,7 +226,7 @@ export class ModifierSheetComponent {
   }
 
   protected onCancel(): void {
-    this.sheetRef.dismiss();
+    this.sheetRef.close();
   }
 
   protected onAdd(): void {
@@ -236,7 +249,7 @@ export class ModifierSheetComponent {
       modifierItems,
     };
 
-    this.sheetRef.dismiss(lineItem);
+    this.sheetRef.close(lineItem);
   }
 
   private getSelectedVariant(): ProductVariantDto | null {

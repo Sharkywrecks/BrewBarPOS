@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideZonelessChangeDetection } from '@angular/core';
@@ -39,12 +38,12 @@ function makeModifier(overrides: Partial<ProductModifierDto> = {}): ProductModif
 describe('RegisterPage.onProductSelected', () => {
   let page: RegisterPage;
   let cart: { addItem: ReturnType<typeof vi.fn> };
-  let bottomSheet: { open: ReturnType<typeof vi.fn> };
+  let dialog: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     cart = { addItem: vi.fn() };
-    bottomSheet = {
-      open: vi.fn().mockReturnValue({ afterDismissed: () => ({ subscribe: vi.fn() }) }),
+    dialog = {
+      open: vi.fn().mockReturnValue({ afterClosed: () => ({ subscribe: vi.fn() }) }),
     };
 
     TestBed.configureTestingModule({
@@ -52,7 +51,6 @@ describe('RegisterPage.onProductSelected', () => {
         provideZonelessChangeDetection(),
         RegisterPage,
         { provide: CartStore, useValue: cart },
-        { provide: MatBottomSheet, useValue: bottomSheet },
         {
           provide: MenuService,
           useValue: {
@@ -68,7 +66,7 @@ describe('RegisterPage.onProductSelected', () => {
           useValue: { taxRate: 0.15, settings: () => ({ taxRate: 0.15 }) },
         },
         { provide: Router, useValue: { navigate: vi.fn() } },
-        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: MatDialog, useValue: dialog },
         { provide: MatSnackBar, useValue: { open: vi.fn() } },
         { provide: CLIENT_TOKEN, useValue: {} },
       ],
@@ -82,7 +80,7 @@ describe('RegisterPage.onProductSelected', () => {
     page.onProductSelected(product);
 
     expect(cart.addItem).toHaveBeenCalledTimes(1);
-    expect(bottomSheet.open).not.toHaveBeenCalled();
+    expect(dialog.open).not.toHaveBeenCalled();
   });
 
   it('should open modifier sheet when product has an OPTIONAL modifier (regression for cocktail Virgin Variant bug)', () => {
@@ -93,7 +91,7 @@ describe('RegisterPage.onProductSelected', () => {
 
     page.onProductSelected(product);
 
-    expect(bottomSheet.open).toHaveBeenCalledTimes(1);
+    expect(dialog.open).toHaveBeenCalledTimes(1);
     expect(cart.addItem).not.toHaveBeenCalled();
   });
 
@@ -104,7 +102,7 @@ describe('RegisterPage.onProductSelected', () => {
 
     page.onProductSelected(product);
 
-    expect(bottomSheet.open).toHaveBeenCalledTimes(1);
+    expect(dialog.open).toHaveBeenCalledTimes(1);
     expect(cart.addItem).not.toHaveBeenCalled();
   });
 
@@ -118,7 +116,7 @@ describe('RegisterPage.onProductSelected', () => {
 
     page.onProductSelected(product);
 
-    expect(bottomSheet.open).toHaveBeenCalledTimes(1);
+    expect(dialog.open).toHaveBeenCalledTimes(1);
     expect(cart.addItem).not.toHaveBeenCalled();
   });
 });

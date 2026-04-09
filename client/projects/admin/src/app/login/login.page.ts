@@ -57,6 +57,8 @@ import { AuthService } from 'auth';
                 Sign In
               }
             </button>
+
+            <a mat-button href="/" class="full-width back-to-pos"> Back to POS </a>
           </form>
         </mat-card-content>
       </mat-card>
@@ -91,6 +93,9 @@ import { AuthService } from 'auth';
       }
       .full-width {
         width: 100%;
+      }
+      .back-to-pos {
+        margin-top: 8px;
       }
       .error-message {
         color: var(--mat-sys-error);

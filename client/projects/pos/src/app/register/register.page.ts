@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -25,7 +24,6 @@ import { BarcodeInputComponent } from './barcode-input.component';
     ProductGridComponent,
     OrderSidebarComponent,
     BarcodeInputComponent,
-    MatBottomSheetModule,
     MatDialogModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -85,7 +83,6 @@ export class RegisterPage implements OnInit {
   private readonly cart = inject(CartStore);
   private readonly settingsService = inject(SettingsService);
   private readonly router = inject(Router);
-  private readonly bottomSheet = inject(MatBottomSheet);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly client = inject<IClient>(CLIENT_TOKEN);
@@ -145,13 +142,17 @@ export class RegisterPage implements OnInit {
       return;
     }
 
-    // Open modifier sheet
-    const ref = this.bottomSheet.open(ModifierSheetComponent, {
-      data: { product } as ModifierSheetData,
-      panelClass: 'modifier-sheet-panel',
-    });
+    // Open modifier dialog (centered)
+    const ref = this.dialog.open<ModifierSheetComponent, ModifierSheetData, CartLineItem>(
+      ModifierSheetComponent,
+      {
+        data: { product },
+        panelClass: 'modifier-sheet-panel',
+        autoFocus: false,
+      },
+    );
 
-    ref.afterDismissed().subscribe((result: CartLineItem | undefined) => {
+    ref.afterClosed().subscribe((result: CartLineItem | undefined) => {
       if (result) {
         this.cart.addItem(result);
       }
