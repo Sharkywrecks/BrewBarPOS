@@ -12,4 +12,17 @@
     <PackageReference Include="WixToolset.Dtf.WindowsInstaller" Version="5.0.2" />
   </ItemGroup>
 
+  <!--
+    CustomAction.config is bundled inside BrewBar.CustomActions.CA.dll by
+    MakeSfxCA. The WiX DTF targets pass @(Content) through to MakeSfxCA, so
+    marking the file as Content (rather than the MSBuild-special App.config)
+    is what gets it into the SFXCA cab. See CustomAction.config for the
+    rationale and the failure mode if it is missing.
+  -->
+  <ItemGroup>
+    <Content Include="CustomAction.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

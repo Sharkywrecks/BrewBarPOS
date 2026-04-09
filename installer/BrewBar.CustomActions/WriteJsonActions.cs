@@ -17,25 +17,95 @@ namespace BrewBar.CustomActions;
 ///      with no shell parsing of any kind.
 ///   3. JsonEscape() is the only encoding step, and we control it.
 ///
-/// Properties are propagated to deferred actions via SetProperty CAs in Package.wxs
-/// (see WriteBootstrapJsonSetData / WriteDeploymentJsonSetData).
+/// Property propagation pipeline: deferred CAs cannot read MSI properties directly,
+/// so an immediate "Prepare*" CA reads them via session["X"], base64-encodes each
+/// value, and writes the joined result to the property whose name matches the
+/// deferred CA (MSI then exposes that string as session.CustomActionData inside
+/// the deferred sandbox). Base64 — instead of the WiX SetProperty CA's raw
+/// "key=[VALUE];key=[VALUE]" substitution — is required because CustomActionData
+/// has no escaping for the ';' field separator or '=' kv separator: a password
+/// containing ';' would otherwise silently truncate (regression: 2026-04-09).
 /// </summary>
 public static class WriteJsonActions
 {
+    // ─── Immediate CAs: read properties + pack base64 CustomActionData ─────
+
+    [CustomAction]
+    public static ActionResult PrepareBootstrapData(Session session)
+    {
+        try
+        {
+            var sb = new StringBuilder();
+            AppendB64(sb, "INSTALLFOLDER",  session["INSTALLFOLDER"]);
+            AppendB64(sb, "ADMIN_NAME",     session["ADMIN_NAME"]);
+            AppendB64(sb, "ADMIN_EMAIL",    session["ADMIN_EMAIL"]);
+            AppendB64(sb, "ADMIN_PASSWORD", session["ADMIN_PASSWORD"]);
+            AppendB64(sb, "ADMIN_PIN",      session["ADMIN_PIN"]);
+            AppendB64(sb, "STORE_NAME",     session["STORE_NAME"]);
+            AppendB64(sb, "TAX_RATE_PCT",   session["TAX_RATE_PCT"]);
+            AppendB64(sb, "CURRENCY_CODE",  session["CURRENCY_CODE"]);
+            session["WriteBootstrapJson"] = sb.ToString();
+            return ActionResult.Success;
+        }
+        catch (Exception ex)
+        {
+            session.Log("BrewBar bootstrap: PrepareBootstrapData failed: {0}", ex);
+            return ActionResult.Success; // non-fatal — deferred CA will skip on missing fields
+        }
+    }
+
+    [CustomAction]
+    public static ActionResult PrepareDeploymentData(Session session)
+    {
+        try
+        {
+            var sb = new StringBuilder();
+            AppendB64(sb, "INSTALLFOLDER", session["INSTALLFOLDER"]);
+            AppendB64(sb, "DEPLOY_MODE",   session["DEPLOY_MODE"]);
+            AppendB64(sb, "API_URL",       session["API_URL"]);
+            session["WriteDeploymentJson"] = sb.ToString();
+            return ActionResult.Success;
+        }
+        catch (Exception ex)
+        {
+            session.Log("BrewBar bootstrap: PrepareDeploymentData failed: {0}", ex);
+            return ActionResult.Failure;
+        }
+    }
+
+    [CustomAction]
+    public static ActionResult PrepareJwtSecretData(Session session)
+    {
+        try
+        {
+            var sb = new StringBuilder();
+            AppendB64(sb, "INSTALLFOLDER", session["INSTALLFOLDER"]);
+            session["WriteJwtSecret"] = sb.ToString();
+            return ActionResult.Success;
+        }
+        catch (Exception ex)
+        {
+            session.Log("BrewBar bootstrap: PrepareJwtSecretData failed: {0}", ex);
+            return ActionResult.Failure;
+        }
+    }
+
+    // ─── Deferred CAs: decode + write files ────────────────────────────────
+
     [CustomAction]
     public static ActionResult WriteBootstrapJson(Session session)
     {
         try
         {
             var data = session.CustomActionData;
-            var installFolder = data["INSTALLFOLDER"];
-            var displayName = data["ADMIN_NAME"];
-            var email = data["ADMIN_EMAIL"];
-            var password = data["ADMIN_PASSWORD"];
-            var pin = data["ADMIN_PIN"];
-            var storeName = data["STORE_NAME"];
-            var taxRatePct = data["TAX_RATE_PCT"];
-            var currency = data["CURRENCY_CODE"];
+            var installFolder = B64Decode(data["INSTALLFOLDER"]);
+            var displayName   = B64Decode(data["ADMIN_NAME"]);
+            var email         = B64Decode(data["ADMIN_EMAIL"]);
+            var password      = B64Decode(data["ADMIN_PASSWORD"]);
+            var pin           = B64Decode(data["ADMIN_PIN"]);
+            var storeName     = B64Decode(data["STORE_NAME"]);
+            var taxRatePct    = B64Decode(data["TAX_RATE_PCT"]);
+            var currency      = B64Decode(data["CURRENCY_CODE"]);
 
             // Skip silently if the operator left credentials blank — fall through to
             // first-run /api/auth/setup. Don't half-write a file with empty fields.
@@ -90,9 +160,9 @@ public static class WriteJsonActions
         try
         {
             var data = session.CustomActionData;
-            var installFolder = data["INSTALLFOLDER"];
-            var mode = data["DEPLOY_MODE"];
-            var apiUrl = data["API_URL"];
+            var installFolder = B64Decode(data["INSTALLFOLDER"]);
+            var mode          = B64Decode(data["DEPLOY_MODE"]);
+            var apiUrl        = B64Decode(data["API_URL"]);
 
             var sb = new StringBuilder();
             sb.Append('{');
@@ -124,7 +194,7 @@ public static class WriteJsonActions
     {
         try
         {
-            var installFolder = session.CustomActionData["INSTALLFOLDER"];
+            var installFolder = B64Decode(session.CustomActionData["INSTALLFOLDER"]);
             var apiDir = Path.Combine(installFolder, "resources", "api");
             Directory.CreateDirectory(apiDir);
             var path = Path.Combine(apiDir, "appsettings.Desktop.local.json");
@@ -149,6 +219,31 @@ public static class WriteJsonActions
             session.Log("BrewBar bootstrap: WriteJwtSecret failed: {0}", ex);
             return ActionResult.Failure;
         }
+    }
+
+    // ─── CustomActionData base64 packing ───────────────────────────────────
+    //
+    // CustomActionData has no escape mechanism for ';' (field separator) or '='
+    // (key/value separator). The previous SetProperty CA emitted raw values via
+    // [PROPERTY] substitution, so a password containing ';' would silently
+    // truncate at the first occurrence. Base64-encoding each value before
+    // packing eliminates the collision entirely (the alphabet is A-Z a-z 0-9
+    // + / =, and trailing '=' padding is fine because it only appears at the
+    // very end of a token, not as a delimiter).
+
+    private static void AppendB64(StringBuilder sb, string key, string? value)
+    {
+        if (sb.Length > 0) sb.Append(';');
+        sb.Append(key);
+        sb.Append('=');
+        sb.Append(Convert.ToBase64String(Encoding.UTF8.GetBytes(value ?? string.Empty)));
+    }
+
+    private static string B64Decode(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        try { return Encoding.UTF8.GetString(Convert.FromBase64String(value!)); }
+        catch (FormatException) { return string.Empty; }
     }
 
     private static string JsonEscape(string s)

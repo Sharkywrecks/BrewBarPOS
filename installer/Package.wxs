@@ -281,10 +281,18 @@
 
     <!-- Bootstrap.json: admin credentials + business settings for first-launch.
          The API consumes it under a zero-users precondition (BootstrapService)
-         and deletes it. Skipped silently by the CA if any credential is blank. -->
-    <CustomAction Id="WriteBootstrapJsonSetData"
-                  Property="WriteBootstrapJson"
-                  Value="INSTALLFOLDER=[INSTALLFOLDER];ADMIN_NAME=[ADMIN_NAME];ADMIN_EMAIL=[ADMIN_EMAIL];ADMIN_PASSWORD=[ADMIN_PASSWORD];ADMIN_PIN=[ADMIN_PIN];STORE_NAME=[STORE_NAME];TAX_RATE_PCT=[TAX_RATE_PCT];CURRENCY_CODE=[CURRENCY_CODE]" />
+         and deletes it. Skipped silently by the CA if any credential is blank.
+
+         CustomActionData is built by PrepareBootstrapData (an immediate
+         managed CA) which base64-encodes each value before packing. The old
+         WiX SetProperty CA used raw [PROPERTY] substitution, which silently
+         truncated values containing ';' (CustomActionData's field separator).
+         See WriteJsonActions.cs for the rationale. -->
+    <CustomAction Id="PrepareBootstrapData"
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="PrepareBootstrapData"
+                  Execute="immediate"
+                  Return="check" />
     <CustomAction Id="WriteBootstrapJson"
                   BinaryRef="BrewBarCustomActionsBinary"
                   DllEntry="WriteBootstrapJson"
@@ -292,10 +300,13 @@
                   Impersonate="no"
                   Return="ignore" />
 
-    <!-- Deployment.json: Electron mode + API URL. -->
-    <CustomAction Id="WriteDeploymentJsonSetData"
-                  Property="WriteDeploymentJson"
-                  Value="INSTALLFOLDER=[INSTALLFOLDER];DEPLOY_MODE=[DEPLOY_MODE];API_URL=[API_URL]" />
+    <!-- Deployment.json: Electron mode + API URL. Same base64-packed
+         CustomActionData pipeline as bootstrap above. -->
+    <CustomAction Id="PrepareDeploymentData"
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="PrepareDeploymentData"
+                  Execute="immediate"
+                  Return="check" />
     <CustomAction Id="WriteDeploymentJson"
                   BinaryRef="BrewBarCustomActionsBinary"
                   DllEntry="WriteDeploymentJson"
@@ -309,9 +320,11 @@
       ValidateJwtSecret), so each install must have its own random key. Idempotent
       via the CA — preserves existing key on MajorUpgrade.
     -->
-    <CustomAction Id="WriteJwtSecretSetData"
-                  Property="WriteJwtSecret"
-                  Value="INSTALLFOLDER=[INSTALLFOLDER]" />
+    <CustomAction Id="PrepareJwtSecretData"
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="PrepareJwtSecretData"
+                  Execute="immediate"
+                  Return="check" />
     <CustomAction Id="WriteJwtSecret"
                   BinaryRef="BrewBarCustomActionsBinary"
                   DllEntry="WriteJwtSecret"
@@ -334,17 +347,20 @@
                   Return="ignore" />
 
     <InstallExecuteSequence>
-      <!-- SetProperty CAs are immediate; they propagate MSI properties into the
-           CustomActionData of the matching deferred CAs. They must run before the
-           deferred CAs but inside the InstallExecute phase. -->
-      <Custom Action="WriteDeploymentJsonSetData" Before="WriteDeploymentJson" />
+      <!-- Prepare* CAs are immediate managed CAs; they read MSI properties via
+           session["X"], base64-encode each value, and write the joined result
+           to the property whose name matches the deferred CA (MSI then
+           surfaces that string as session.CustomActionData inside the
+           sandbox). They must run before the deferred CAs but inside the
+           InstallExecute phase. -->
+      <Custom Action="PrepareDeploymentData" Before="WriteDeploymentJson" />
       <Custom Action="WriteDeploymentJson" After="InstallFiles" />
 
-      <Custom Action="WriteBootstrapJsonSetData" Before="WriteBootstrapJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
+      <Custom Action="PrepareBootstrapData" Before="WriteBootstrapJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
       <Custom Action="WriteBootstrapJson" After="WriteDeploymentJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
 
       <!-- Always generate a JWT key — the API exe ships in both modes and may be started later -->
-      <Custom Action="WriteJwtSecretSetData" Before="WriteJwtSecret" />
+      <Custom Action="PrepareJwtSecretData" Before="WriteJwtSecret" />
       <Custom Action="WriteJwtSecret" After="WriteBootstrapJson" />
 
       <Custom Action="DeleteUserData" After="RemoveFiles" Condition="DELETE_DATA=&quot;1&quot;" />
