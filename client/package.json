@@ -9,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "pretest": "npm run build:libs",
     "test": "ng test",
-    "generate": "nswag run /runtime:Net100",
+    "generate": "node ../scripts/generate-api-client.js",
     "lint": "ng lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

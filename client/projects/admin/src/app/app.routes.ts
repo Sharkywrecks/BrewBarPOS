@@ -8,6 +8,10 @@ export const routes: Routes = [
     loadComponent: () => import('./login/login.page').then((m) => m.LoginPage),
   },
   {
+    path: 'setup',
+    loadComponent: () => import('./setup/setup.page').then((m) => m.SetupPage),
+  },
+  {
     path: '',
     component: AdminShellComponent,
     canActivate: [adminAuthGuard],

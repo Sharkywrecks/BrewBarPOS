@@ -110,6 +110,24 @@ export class LoginPage {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  constructor() {
+    // First-run detection: if the API has zero users (empty staff list), the
+    // operator hasn't completed setup yet — send them to /setup so they can
+    // create the first admin instead of staring at a login form they can't use.
+    void this.redirectIfFirstRun();
+  }
+
+  private async redirectIfFirstRun(): Promise<void> {
+    try {
+      const staff = await this.auth.getStaff();
+      if (staff.length === 0) {
+        await this.router.navigate(['/setup']);
+      }
+    } catch {
+      // API unreachable — let the login form show its normal error path.
+    }
+  }
+
   async onSubmit(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);

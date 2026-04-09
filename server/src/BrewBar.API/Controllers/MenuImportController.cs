@@ -20,7 +20,7 @@ public class MenuImportController : BaseApiController
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "Admin")]
-    [RequestSizeLimit(2 * 1024 * 1024)] // 2MB — menu imports are tiny; tight cap protects against zip bombs
+    [RequestFormLimits(MultipartBodyLengthLimit = 2 * 1024 * 1024)] // 2MB — menu imports are tiny; tight cap protects against zip bombs
     public async Task<ActionResult<MenuImportResult>> Import(IFormFile file, CancellationToken ct)
     {
         if (file == null || file.Length == 0)

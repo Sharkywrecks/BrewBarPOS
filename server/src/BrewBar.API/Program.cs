@@ -80,7 +80,11 @@ if (Directory.Exists(wwwroot))
     app.UseStaticFiles();
 }
 
-if (app.Environment.IsDevelopment())
+// Swagger is exposed in Development AND in the dedicated NSwag environment
+// (used by scripts/generate-api-client.js, which boots a throwaway instance,
+// downloads /swagger/v1/swagger.json, then kills the process). Production
+// runs do not expose swagger.
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("NSwag"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();

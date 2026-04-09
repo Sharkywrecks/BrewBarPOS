@@ -6,6 +6,9 @@
 /out-tsc
 /bazel-out
 
+# NSwag input — fetched from running API by scripts/generate-api-client.js
+swagger.json
+
 # Node
 /node_modules
 npm-debug.log

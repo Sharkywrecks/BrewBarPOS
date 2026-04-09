@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { CLIENT_TOKEN, IClient, UserDto } from 'api-client';
 
@@ -9,6 +10,7 @@ function makeMockClient(): Partial<IClient> {
   return {
     auth_PinLogin: vi.fn(),
     auth_GetCurrentUser: vi.fn(),
+    auth_InitialSetup: vi.fn(),
   };
 }
 
@@ -73,6 +75,37 @@ describe('AuthService', () => {
       await service.pinLogin('user-42', '9999');
 
       expect(client.auth_PinLogin).toHaveBeenCalledWith({ userId: 'user-42', pin: '9999' });
+    });
+  });
+
+  describe('setup', () => {
+    const dto = {
+      displayName: 'Cafe Owner',
+      email: 'owner@cafe.local',
+      password: 'OwnerPass123!',
+      pin: '4242',
+    };
+
+    it('calls auth_InitialSetup and stores the returned token', async () => {
+      const user = makeUser({ token: 'setup-jwt', authMethod: 'password', roles: ['Admin'] });
+      (client.auth_InitialSetup as ReturnType<typeof vi.fn>).mockReturnValue(of(user));
+
+      const result = await service.setup(dto);
+
+      expect(client.auth_InitialSetup).toHaveBeenCalledWith(dto);
+      expect(result).toEqual(user);
+      expect(service.currentUser()).toEqual(user);
+      expect(localStorage.getItem('brewbar_token')).toBe('setup-jwt');
+    });
+
+    it('propagates errors so the page can render them', async () => {
+      (client.auth_InitialSetup as ReturnType<typeof vi.fn>).mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, statusText: 'Conflict' })),
+      );
+
+      await expect(service.setup(dto)).rejects.toMatchObject({ status: 409 });
+      expect(service.currentUser()).toBeNull();
+      expect(localStorage.getItem('brewbar_token')).toBeNull();
     });
   });
 

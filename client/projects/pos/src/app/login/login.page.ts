@@ -45,7 +45,11 @@ import { PinPadComponent } from './pin-pad.component';
                 </button>
               }
               @if (staff().length === 0) {
-                <p class="no-staff">No staff members found.</p>
+                <div class="no-staff">
+                  <p><strong>No staff accounts yet.</strong></p>
+                  <p>Open the admin app to create the first administrator, then come back here.</p>
+                  <a mat-flat-button color="primary" href="/admin/setup">Go to setup</a>
+                </div>
               }
             </div>
           } @else if (loading()) {
@@ -133,7 +137,17 @@ import { PinPadComponent } from './pin-pad.component';
       .no-staff {
         grid-column: 1 / -1;
         color: var(--mat-sys-on-surface-variant);
-        padding: 24px;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .no-staff p {
+        margin: 0;
+      }
+      .no-staff a {
+        margin-top: 12px;
       }
       .pin-section {
         display: flex;

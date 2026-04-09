@@ -1,6 +1,6 @@
 import { Injectable, Inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { CLIENT_TOKEN, IClient, UserDto, StaffDto, PinLoginDto } from 'api-client';
+import { CLIENT_TOKEN, IClient, UserDto, StaffDto, PinLoginDto, InitialSetupDto } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 
 const TOKEN_KEY = 'brewbar_token';
@@ -29,6 +29,19 @@ export class AuthService {
 
   async getStaff(): Promise<StaffDto[]> {
     return firstValueFrom(this.client.auth_GetStaff());
+  }
+
+  /**
+   * One-shot first-run bootstrap: creates the very first admin account. The
+   * server rejects this with 409 as soon as any user exists, so it can only be
+   * called on a brand-new install. On success, stores the JWT and sets the
+   * current user just like a normal login.
+   */
+  async setup(dto: InitialSetupDto): Promise<UserDto> {
+    const user = await firstValueFrom(this.client.auth_InitialSetup(dto));
+    this.storeToken(user.token!);
+    this.currentUser.set(user);
+    return user;
   }
 
   async pinLogin(userId: string, pin: string): Promise<UserDto> {
