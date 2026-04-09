@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using BrewBar.Core.Interfaces;
 using BrewBar.Infrastructure.Data;
@@ -11,7 +12,22 @@ public static class ApplicationServicesExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
     {
-        services.AddControllers();
+        services.AddControllers()
+            // Serialise enums as their string names ("SCR", "USD") instead of the
+            // default integer ordinals. This is what the Angular client expects:
+            // SettingsService and AppCurrencyPipe key off Currency.SCR / Currency.USD
+            // / etc., not Currency._0 / Currency._1. With ordinal serialisation, the
+            // generated TypeScript enum has no named members and the client doesn't
+            // compile against the rest of the codebase.
+            //
+            // Swashbuckle automatically reflects this in the OpenAPI schema (it
+            // inspects registered IJsonHelper / JsonOptions converters), so the
+            // schema describes Currency as `"type": "string", "enum": ["SCR", ...]`
+            // and NSwag emits a proper named TypeScript enum.
+            .AddJsonOptions(opt =>
+            {
+                opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
         services.AddRateLimiter(options =>
         {

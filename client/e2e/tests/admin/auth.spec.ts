@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { AdminLoginPage } from '../../pages/admin-login.page';
+import { TEST_ADMIN } from '../../test-data';
 
 test.describe('Admin Authentication @integration', () => {
   test('should show login form', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Admin Authentication @integration', () => {
     const loginPage = new AdminLoginPage(page);
     await loginPage.goto();
 
-    await loginPage.login('admin@brewbar.local', 'Admin123!');
+    await loginPage.login(TEST_ADMIN.email, TEST_ADMIN.password);
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 10_000 });
   });
 

@@ -1,4 +1,5 @@
 import { type Page, type Locator } from '@playwright/test';
+import { TEST_ADMIN } from '../test-data';
 
 export class AdminLoginPage {
   readonly page: Page;
@@ -33,7 +34,7 @@ export class AdminLoginPage {
   }
 
   async loginAsAdmin() {
-    await this.login('admin@brewbar.local', 'Admin123!');
+    await this.login(TEST_ADMIN.email, TEST_ADMIN.password);
     await this.page.waitForURL('**/dashboard', { timeout: 15_000 });
   }
 }

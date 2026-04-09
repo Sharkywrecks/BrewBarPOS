@@ -4,11 +4,9 @@ import { RegisterPage } from '../../pages/register.page';
 
 test.describe('Order Flow @smoke', () => {
   test.beforeEach(async ({ page }) => {
-    // Log in as cashier
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await loginPage.enterPin('0000');
-    await loginPage.waitForRedirect();
+    await loginPage.loginAsCashier();
   });
 
   test('should display categories and products', async ({ page }) => {

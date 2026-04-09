@@ -5,13 +5,7 @@ import { RegisterPage } from '../../pages/register.page';
 async function loginAsCashier(page: Page): Promise<void> {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
-
-  const cashierBtn = page.locator('.staff-btn', { hasText: 'Demo Cashier' });
-  await expect(cashierBtn).toBeVisible({ timeout: 15_000 });
-  await cashierBtn.click();
-
-  await loginPage.enterPin('0000');
-  await loginPage.waitForRedirect();
+  await loginPage.loginAsCashier();
 }
 
 test.describe('Menu Browsing @integration', () => {

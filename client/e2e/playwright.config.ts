@@ -1,7 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Smoke tests run against the local dev pos server (port 4201) backed by the
+// dev API on port 5000. global-setup.ts reads the API URL from E2E_API_URL,
+// so set the dev port here before the import is evaluated.
+process.env['E2E_API_URL'] ??= 'http://localhost:5000';
+
 export default defineConfig({
   testDir: './tests',
+  // Bootstraps the e2e admin + cashier + sample catalog against the dev API.
+  // Same script as the integration configs; idempotent so re-running smoke
+  // doesn't fail on duplicate-user errors.
+  globalSetup: require.resolve('./global-setup'),
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,

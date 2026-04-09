@@ -43,7 +43,7 @@ public class PaymentsApiTests : IClassFixture<TestFixture>
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(json.GetProperty("changeGiven").GetDecimal() > 0);
-        Assert.Equal(0, json.GetProperty("method").GetInt32()); // Cash
+        Assert.Equal("Cash", json.GetProperty("method").GetString());
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class PaymentsApiTests : IClassFixture<TestFixture>
 
         var orderResponse = await client.GetAsync($"/api/orders/{orderId}");
         var orderJson = await orderResponse.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(1, orderJson.GetProperty("status").GetInt32()); // Completed
+        Assert.Equal("Completed", orderJson.GetProperty("status").GetString());
     }
 
     [Fact]

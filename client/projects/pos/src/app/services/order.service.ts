@@ -6,6 +6,8 @@ import {
   OrderDto,
   CreatePaymentDto,
   PaymentDto,
+  OrderStatus,
+  PaymentStatus,
 } from 'api-client';
 import { OutboxService } from 'sync';
 import { firstValueFrom } from 'rxjs';
@@ -36,7 +38,7 @@ export class OrderService {
         id: 0,
         localId: dto.localId,
         displayOrderNumber: `OFFLINE-${dto.localId!.substring(0, 8).toUpperCase()}`,
-        status: 0, // Open
+        status: OrderStatus.Open,
         subtotal: dto.lineItems!.reduce((sum, li) => sum + li.unitPrice! * li.quantity!, 0),
         taxRate: dto.taxRate,
         taxAmount: 0,
@@ -64,7 +66,7 @@ export class OrderService {
         id: 0,
         orderId: dto.orderId,
         method: dto.method,
-        status: 0, // Completed
+        status: PaymentStatus.Completed,
         amountTendered: dto.amountTendered,
         changeGiven: 0,
         total: dto.total,

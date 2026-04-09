@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { AdminLoginPage } from '../../pages/admin-login.page';
 import { AdminReportsPage } from '../../pages/admin-reports.page';
+import { createPaidTestOrder } from '../../helpers/api-helpers';
 
 async function loginAsAdmin(page: Page): Promise<void> {
   const loginPage = new AdminLoginPage(page);
@@ -8,58 +9,10 @@ async function loginAsAdmin(page: Page): Promise<void> {
   await loginPage.loginAsAdmin();
 }
 
-// Helper: create a test order so reports have data
-async function createTestOrder(page: Page): Promise<void> {
-  const baseUrl = 'http://localhost:5050';
-
-  const loginRes = await page.request.post(`${baseUrl}/api/auth/pin-login`, {
-    data: { pin: '0000' },
-  });
-  const { token } = await loginRes.json();
-
-  const catRes = await page.request.get(`${baseUrl}/api/categories?activeOnly=true`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const categories = await catRes.json();
-  const catDetailRes = await page.request.get(`${baseUrl}/api/categories/${categories[0].id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const catDetail = await catDetailRes.json();
-  const product = catDetail.products[0];
-
-  const orderRes = await page.request.post(`${baseUrl}/api/orders`, {
-    headers: { Authorization: `Bearer ${token}` },
-    data: {
-      localId: crypto.randomUUID(),
-      taxRate: 0.15,
-      lineItems: [
-        {
-          productId: product.id,
-          productName: product.name,
-          unitPrice: product.basePrice,
-          quantity: 2,
-          modifierItems: [],
-        },
-      ],
-    },
-  });
-  const order = await orderRes.json();
-
-  await page.request.post(`${baseUrl}/api/payments`, {
-    headers: { Authorization: `Bearer ${token}` },
-    data: {
-      orderId: order.id,
-      method: 0,
-      amountTendered: order.total,
-      total: order.total,
-    },
-  });
-}
-
 test.describe('Reports @integration', () => {
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
-    await createTestOrder(page);
+    await createPaidTestOrder(page);
     await page.close();
   });
 

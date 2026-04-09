@@ -2,6 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/integration',
+  // Bootstraps a fresh admin + cashier + sample catalog against the integration
+  // API on localhost:5050 so the suite has known data to assert against. The
+  // production API no longer seeds users; this script replaces what the
+  // server-side SeedData used to do.
+  globalSetup: require.resolve('./global-setup'),
   fullyParallel: false,
   retries: process.env['CI'] ? 1 : 0,
   workers: 1,

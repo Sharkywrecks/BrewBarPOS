@@ -287,6 +287,379 @@ public class MenuImportApiTests : IClassFixture<TestFixture>
         Assert.Equal(-50m, options[0].GetProperty("price").GetDecimal());
     }
 
+    // --- Id-based updates ---
+
+    [Fact]
+    public async Task Import_ProductWithId_UpdatesExistingProduct()
+    {
+        var client = await _f.AsAdmin();
+
+        // Step 1: create a product via name-based import
+        using var stream1 = CreateTestWorkbook(wb =>
+        {
+            wb.Worksheets.Delete("Modifiers");
+            wb.Worksheets.Delete("Product Modifiers");
+            var p = wb.Worksheet("Products");
+            p.Cell(2, 1).Value = "IdTest Cat";
+            p.Cell(2, 2).Value = "IdTest Original";
+            p.Cell(2, 3).Value = "before";
+            p.Cell(2, 4).Value = 5.00;
+            p.Cell(2, 5).Value = "Yes";
+            // Wipe other rows
+            p.Row(3).Clear();
+            p.Row(4).Clear();
+        });
+        await client.PostAsync("/api/MenuImport", CreateFormData(stream1));
+
+        // Look up the assigned id
+        var productsResp = await client.GetAsync("/api/products?pageSize=200");
+        var productsJson = await productsResp.Content.ReadFromJsonAsync<JsonElement>();
+        int createdId = 0;
+        foreach (var p in productsJson.GetProperty("data").EnumerateArray())
+        {
+            if (p.GetProperty("name").GetString() == "IdTest Original")
+            {
+                createdId = p.GetProperty("id").GetInt32();
+                break;
+            }
+        }
+        Assert.True(createdId > 0);
+
+        // Step 2: re-import with Id column → rename + price change
+        var wb2 = new XLWorkbook();
+        var sheet = wb2.Worksheets.Add("Products");
+        sheet.Cell(1, 1).Value = "Id";
+        sheet.Cell(1, 2).Value = "Category";
+        sheet.Cell(1, 3).Value = "Product Name";
+        sheet.Cell(1, 4).Value = "Description";
+        sheet.Cell(1, 5).Value = "Price";
+        sheet.Cell(1, 6).Value = "Available";
+        sheet.Cell(2, 1).Value = createdId;
+        sheet.Cell(2, 2).Value = "IdTest Cat";
+        sheet.Cell(2, 3).Value = "IdTest Renamed";
+        sheet.Cell(2, 4).Value = "after";
+        sheet.Cell(2, 5).Value = 9.99;
+        sheet.Cell(2, 6).Value = "Yes";
+        var ms = new MemoryStream();
+        wb2.SaveAs(ms);
+        ms.Position = 0;
+
+        var resp = await client.PostAsync("/api/MenuImport", CreateFormData(ms));
+        var resultJson = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, resultJson.GetProperty("productsUpdated").GetInt32());
+        Assert.Equal(0, resultJson.GetProperty("productsCreated").GetInt32());
+
+        // Verify the rename + price stuck via API
+        var verifyResp = await client.GetAsync("/api/products?pageSize=200");
+        var verifyJson = await verifyResp.Content.ReadFromJsonAsync<JsonElement>();
+        JsonElement? renamed = null;
+        foreach (var p in verifyJson.GetProperty("data").EnumerateArray())
+        {
+            if (p.GetProperty("id").GetInt32() == createdId)
+            {
+                renamed = p;
+                break;
+            }
+        }
+        Assert.NotNull(renamed);
+        Assert.Equal("IdTest Renamed", renamed!.Value.GetProperty("name").GetString());
+        Assert.Equal(9.99m, renamed.Value.GetProperty("basePrice").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Import_ProductWithUnknownId_ReportsError()
+    {
+        var client = await _f.AsAdmin();
+        var wb = new XLWorkbook();
+        var sheet = wb.Worksheets.Add("Products");
+        sheet.Cell(1, 1).Value = "Id";
+        sheet.Cell(1, 2).Value = "Category";
+        sheet.Cell(1, 3).Value = "Product Name";
+        sheet.Cell(1, 4).Value = "Price";
+        sheet.Cell(2, 1).Value = 999999;
+        sheet.Cell(2, 2).Value = "Ghost";
+        sheet.Cell(2, 3).Value = "Ghost Product";
+        sheet.Cell(2, 4).Value = 1.00;
+        var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        ms.Position = 0;
+
+        var resp = await client.PostAsync("/api/MenuImport", CreateFormData(ms));
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, json.GetProperty("productsCreated").GetInt32());
+        Assert.Equal(0, json.GetProperty("productsUpdated").GetInt32());
+        var errors = json.GetProperty("errors");
+        Assert.True(errors.GetArrayLength() > 0);
+        Assert.Contains("999999", errors[0].GetString());
+    }
+
+    [Fact]
+    public async Task Import_ModifierWithId_UpdatesExistingModifier()
+    {
+        var client = await _f.AsAdmin();
+
+        // Create a modifier via name-based import
+        using var stream1 = CreateTestWorkbook(wb =>
+        {
+            wb.Worksheet("Modifiers").Cell(2, 1).Value = "ModIdTest";
+            wb.Worksheet("Modifiers").Cell(3, 1).Value = "ModIdTest";
+            wb.Worksheets.Delete("Product Modifiers");
+        });
+        await client.PostAsync("/api/MenuImport", CreateFormData(stream1));
+
+        // The integration test catalog API may not expose all modifiers; query via
+        // a fresh import that lists all modifiers — simpler: re-fetch using catalog endpoint.
+        var modsResp = await client.GetAsync("/api/modifiers");
+        Assert.Equal(HttpStatusCode.OK, modsResp.StatusCode);
+        var modsJson = await modsResp.Content.ReadFromJsonAsync<JsonElement>();
+        int modId = 0;
+        foreach (var m in modsJson.EnumerateArray())
+        {
+            if (m.GetProperty("name").GetString() == "ModIdTest")
+            {
+                modId = m.GetProperty("id").GetInt32();
+                break;
+            }
+        }
+        Assert.True(modId > 0);
+
+        // Re-import with Id → rename and flip Required
+        var wb2 = new XLWorkbook();
+        var sheet = wb2.Worksheets.Add("Modifiers");
+        sheet.Cell(1, 1).Value = "Id";
+        sheet.Cell(1, 2).Value = "Modifier Name";
+        sheet.Cell(1, 3).Value = "Required";
+        sheet.Cell(1, 4).Value = "Allow Multiple";
+        sheet.Cell(1, 5).Value = "Option Name";
+        sheet.Cell(1, 6).Value = "Option Price";
+        sheet.Cell(2, 1).Value = modId;
+        sheet.Cell(2, 2).Value = "ModIdTest Renamed";
+        sheet.Cell(2, 3).Value = "Yes";
+        sheet.Cell(2, 4).Value = "No";
+        sheet.Cell(2, 5).Value = "Small";
+        sheet.Cell(2, 6).Value = 0;
+        var ms = new MemoryStream();
+        wb2.SaveAs(ms);
+        ms.Position = 0;
+
+        var resp = await client.PostAsync("/api/MenuImport", CreateFormData(ms));
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, json.GetProperty("modifiersUpdated").GetInt32());
+        Assert.Equal(0, json.GetProperty("modifiersCreated").GetInt32());
+    }
+
+    [Fact]
+    public async Task Import_ProductModifierLinkByIds_Works()
+    {
+        var client = await _f.AsAdmin();
+
+        // Step 1: seed a product and a modifier via name-based import
+        using var stream1 = CreateTestWorkbook(wb =>
+        {
+            var p = wb.Worksheet("Products");
+            p.Cell(2, 1).Value = "LinkIdTest Cat";
+            p.Cell(2, 2).Value = "LinkIdTest Product";
+            p.Cell(2, 3).Value = "";
+            p.Cell(2, 4).Value = 5.00;
+            p.Cell(2, 5).Value = "Yes";
+            p.Row(3).Clear();
+            p.Row(4).Clear();
+
+            var m = wb.Worksheet("Modifiers");
+            m.Cell(2, 1).Value = "LinkIdTest Modifier";
+            m.Cell(2, 2).Value = "No";
+            m.Cell(2, 3).Value = "No";
+            m.Cell(2, 4).Value = "Opt A";
+            m.Cell(2, 5).Value = 0;
+            m.Row(3).Clear();
+
+            wb.Worksheets.Delete("Product Modifiers");
+        });
+        await client.PostAsync("/api/MenuImport", CreateFormData(stream1));
+
+        // Look up assigned ids
+        var productsResp = await client.GetAsync("/api/products?pageSize=200");
+        var productsJson = await productsResp.Content.ReadFromJsonAsync<JsonElement>();
+        int productId = 0;
+        foreach (var p in productsJson.GetProperty("data").EnumerateArray())
+        {
+            if (p.GetProperty("name").GetString() == "LinkIdTest Product")
+            {
+                productId = p.GetProperty("id").GetInt32();
+                break;
+            }
+        }
+        var modsResp = await client.GetAsync("/api/modifiers");
+        var modsJson = await modsResp.Content.ReadFromJsonAsync<JsonElement>();
+        int modifierId = 0;
+        foreach (var m in modsJson.EnumerateArray())
+        {
+            if (m.GetProperty("name").GetString() == "LinkIdTest Modifier")
+            {
+                modifierId = m.GetProperty("id").GetInt32();
+                break;
+            }
+        }
+        Assert.True(productId > 0 && modifierId > 0);
+
+        // Step 2: link via Id columns only
+        var wb2 = new XLWorkbook();
+        var sheet = wb2.Worksheets.Add("Product Modifiers");
+        sheet.Cell(1, 1).Value = "Product Id";
+        sheet.Cell(1, 2).Value = "Modifier Id";
+        sheet.Cell(2, 1).Value = productId;
+        sheet.Cell(2, 2).Value = modifierId;
+        var ms = new MemoryStream();
+        wb2.SaveAs(ms);
+        ms.Position = 0;
+
+        var resp = await client.PostAsync("/api/MenuImport", CreateFormData(ms));
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, json.GetProperty("productModifierLinksCreated").GetInt32());
+
+        // Verify the link via products API
+        var verifyResp = await client.GetAsync("/api/products?pageSize=200");
+        var verifyJson = await verifyResp.Content.ReadFromJsonAsync<JsonElement>();
+        foreach (var p in verifyJson.GetProperty("data").EnumerateArray())
+        {
+            if (p.GetProperty("id").GetInt32() == productId)
+            {
+                var mods = p.GetProperty("modifiers");
+                Assert.True(mods.GetArrayLength() >= 1);
+                return;
+            }
+        }
+        Assert.Fail("Product not found after Id-based link");
+    }
+
+    [Fact]
+    public async Task Import_BackwardsCompatible_FileWithoutIdColumn_StillWorks()
+    {
+        // The original CreateTestWorkbook helper produces a file with no Id columns —
+        // confirm it still imports cleanly after the header-driven refactor.
+        var client = await _f.AsAdmin();
+        using var stream = CreateTestWorkbook();
+        var resp = await client.PostAsync("/api/MenuImport", CreateFormData(stream));
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(json.GetProperty("productsCreated").GetInt32() >= 0);
+    }
+
+    // --- Export ---
+
+    [Fact]
+    public async Task Export_ReturnsRoundTrippableXlsx()
+    {
+        var client = await _f.AsAdmin();
+
+        // Seed something specific so we can find it on the round-trip
+        using var seedStream = CreateTestWorkbook(wb =>
+        {
+            var p = wb.Worksheet("Products");
+            p.Cell(2, 1).Value = "ExportTest Cat";
+            p.Cell(2, 2).Value = "ExportTest Product";
+            p.Cell(2, 3).Value = "round-trip";
+            p.Cell(2, 4).Value = 12.34;
+            p.Cell(2, 5).Value = "Yes";
+            p.Row(3).Clear();
+            p.Row(4).Clear();
+
+            var m = wb.Worksheet("Modifiers");
+            m.Cell(2, 1).Value = "ExportTest Mod";
+            m.Cell(2, 2).Value = "No";
+            m.Cell(2, 3).Value = "No";
+            m.Cell(2, 4).Value = "Opt X";
+            m.Cell(2, 5).Value = 1.00;
+            m.Row(3).Clear();
+
+            var pm = wb.Worksheet("Product Modifiers");
+            pm.Cell(2, 1).Value = "ExportTest Product";
+            pm.Cell(2, 2).Value = "ExportTest Mod";
+            pm.Row(3).Clear();
+        });
+        await client.PostAsync("/api/MenuImport", CreateFormData(seedStream));
+
+        // Export
+        var exportResp = await client.GetAsync("/api/MenuImport/export");
+        Assert.Equal(HttpStatusCode.OK, exportResp.StatusCode);
+        Assert.Equal(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            exportResp.Content.Headers.ContentType?.MediaType);
+
+        var bytes = await exportResp.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 0);
+
+        using var ms = new MemoryStream(bytes);
+        using var wb = new XLWorkbook(ms);
+
+        // Verify all three sheets exist with Id headers
+        Assert.True(wb.Worksheets.Contains("Products"));
+        Assert.True(wb.Worksheets.Contains("Modifiers"));
+        Assert.True(wb.Worksheets.Contains("Product Modifiers"));
+
+        var productsSheet = wb.Worksheet("Products");
+        Assert.Equal("Id", productsSheet.Cell(1, 1).GetString());
+        Assert.Equal("Category", productsSheet.Cell(1, 2).GetString());
+        Assert.Equal("Product Name", productsSheet.Cell(1, 3).GetString());
+
+        // Find our seeded product and confirm Id is populated
+        bool foundProduct = false;
+        int seededProductId = 0;
+        for (int row = 2; row <= productsSheet.LastRowUsed()!.RowNumber(); row++)
+        {
+            if (productsSheet.Cell(row, 3).GetString() == "ExportTest Product")
+            {
+                seededProductId = (int)productsSheet.Cell(row, 1).GetDouble();
+                Assert.True(seededProductId > 0);
+                Assert.Equal(12.34m, productsSheet.Cell(row, 5).GetValue<decimal>());
+                foundProduct = true;
+                break;
+            }
+        }
+        Assert.True(foundProduct);
+
+        // Verify Product Modifiers sheet has Id columns and contains our link
+        var linksSheet = wb.Worksheet("Product Modifiers");
+        Assert.Equal("Product Id", linksSheet.Cell(1, 1).GetString());
+        Assert.Equal("Modifier Id", linksSheet.Cell(1, 2).GetString());
+
+        bool foundLink = false;
+        for (int row = 2; row <= (linksSheet.LastRowUsed()?.RowNumber() ?? 1); row++)
+        {
+            if ((int)linksSheet.Cell(row, 1).GetDouble() == seededProductId)
+            {
+                Assert.True(linksSheet.Cell(row, 2).GetDouble() > 0);
+                foundLink = true;
+                break;
+            }
+        }
+        Assert.True(foundLink);
+
+        // Round-trip: re-import the exported file and confirm it does not duplicate
+        ms.Position = 0;
+        var reimportResp = await client.PostAsync("/api/MenuImport", CreateFormData(ms));
+        var reimportJson = await reimportResp.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, reimportJson.GetProperty("productsCreated").GetInt32());
+        Assert.Equal(0, reimportJson.GetProperty("modifiersCreated").GetInt32());
+        // Updated count > 0 because every row had an Id and re-applied its fields
+        Assert.True(reimportJson.GetProperty("productsUpdated").GetInt32() > 0);
+    }
+
+    [Fact]
+    public async Task Export_AsCashier_Returns403()
+    {
+        var client = await _f.AsCashier();
+        var resp = await client.GetAsync("/api/MenuImport/export");
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+    }
+
+    [Fact]
+    public async Task Export_Unauthenticated_Returns401()
+    {
+        var resp = await _f.Client.GetAsync("/api/MenuImport/export");
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
     // --- Template ---
 
     [Fact]

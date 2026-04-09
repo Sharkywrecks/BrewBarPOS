@@ -2,21 +2,20 @@ import { test, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/login.page';
 
 test.describe('Login @smoke', () => {
-  test('should show the pin pad on the login page', async ({ page }) => {
+  test('should show the staff picker on the login page', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
 
-    await expect(loginPage.pinButtons.first()).toBeVisible();
+    // The POS login page now requires picking a staff member before the PIN
+    // pad appears. global-setup provisions the e2e cashier so the button is
+    // visible.
+    await expect(page.locator('.staff-btn').first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('should redirect to register after valid PIN', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-
-    // Default cashier PIN from seed data
-    await loginPage.enterPin('0000');
-    await loginPage.waitForRedirect();
-
+    await loginPage.loginAsCashier();
     await expect(page).toHaveURL(/.*register/);
   });
 
@@ -24,9 +23,9 @@ test.describe('Login @smoke', () => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
 
+    await loginPage.selectStaff('Demo Cashier');
     await loginPage.enterPin('9999');
 
-    // Wait for error to appear
     await expect(loginPage.errorMessage).toBeVisible({ timeout: 5_000 });
   });
 

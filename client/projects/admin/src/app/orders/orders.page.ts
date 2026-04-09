@@ -41,9 +41,9 @@ import { firstValueFrom } from 'rxjs';
         <mat-label>Status</mat-label>
         <mat-select [(ngModel)]="statusFilter" (selectionChange)="loadOrders()">
           <mat-option [value]="null">All</mat-option>
-          <mat-option [value]="0">Open</mat-option>
-          <mat-option [value]="1">Completed</mat-option>
-          <mat-option [value]="2">Voided</mat-option>
+          <mat-option [value]="OrderStatus.Open">Open</mat-option>
+          <mat-option [value]="OrderStatus.Completed">Completed</mat-option>
+          <mat-option [value]="OrderStatus.Voided">Voided</mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -149,12 +149,15 @@ export class OrdersPage implements OnInit {
   private readonly client = inject(CLIENT_TOKEN) as IClient;
   private readonly router = inject(Router);
 
+  // Expose the enum to the template — templates can only see component members.
+  protected readonly OrderStatus = OrderStatus;
+
   readonly orders = signal<OrderDto[]>([]);
   readonly loading = signal(false);
 
   readonly columns = ['orderNumber', 'date', 'items', 'total', 'status', 'cashier'];
 
-  statusFilter: number | null = null;
+  statusFilter: OrderStatus | null = null;
   fromDate = '';
   toDate = '';
 
@@ -168,13 +171,7 @@ export class OrdersPage implements OnInit {
       const from = this.fromDate ? new Date(this.fromDate) : undefined;
       const to = this.toDate ? new Date(this.toDate) : undefined;
       const result: PaginationOfOrderDto = await firstValueFrom(
-        this.client.orders_GetOrders(
-          this.statusFilter as OrderStatus | undefined,
-          from,
-          to,
-          0,
-          100,
-        ),
+        this.client.orders_GetOrders(this.statusFilter ?? undefined, from, to, 0, 100),
       );
       this.orders.set(result.data ?? []);
     } finally {

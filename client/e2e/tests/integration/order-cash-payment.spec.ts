@@ -7,13 +7,7 @@ import { OrderCompletePage } from '../../pages/order-complete.page';
 async function loginAndAddWater(page: Page): Promise<void> {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
-
-  const cashierBtn = page.locator('.staff-btn', { hasText: 'Demo Cashier' });
-  await expect(cashierBtn).toBeVisible({ timeout: 15_000 });
-  await cashierBtn.click();
-
-  await loginPage.enterPin('0000');
-  await loginPage.waitForRedirect();
+  await loginPage.loginAsCashier();
 
   const registerPage = new RegisterPage(page);
   await expect(registerPage.productCards.first()).toBeVisible({ timeout: 10_000 });

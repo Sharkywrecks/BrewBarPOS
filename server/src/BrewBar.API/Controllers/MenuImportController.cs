@@ -49,6 +49,20 @@ public class MenuImportController : BaseApiController
     }
 
     /// <summary>
+    /// Export the current catalog as an .xlsx workbook with Id columns populated.
+    /// Re-uploading the exported file will update existing records rather than create duplicates.
+    /// </summary>
+    [HttpGet("export")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Export(CancellationToken ct)
+    {
+        var service = new MenuImportService(_context);
+        var bytes = await service.ExportAsync(ct);
+        var filename = $"menu-export-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
+    }
+
+    /// <summary>
     /// Download the menu template Excel file.
     /// </summary>
     [HttpGet("template")]

@@ -33,6 +33,10 @@ import { AuthService } from 'auth';
             <mat-icon matListItemIcon>restaurant_menu</mat-icon>
             <span matListItemTitle>Catalog</span>
           </a>
+          <a mat-list-item routerLink="/menu-import" routerLinkActive="active">
+            <mat-icon matListItemIcon>upload_file</mat-icon>
+            <span matListItemTitle>Menu Import</span>
+          </a>
           <a mat-list-item routerLink="/orders" routerLinkActive="active">
             <mat-icon matListItemIcon>receipt_long</mat-icon>
             <span matListItemTitle>Orders</span>

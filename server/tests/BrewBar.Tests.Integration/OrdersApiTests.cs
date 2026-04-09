@@ -161,7 +161,7 @@ public class OrdersApiTests : IClassFixture<TestFixture>
         Assert.Equal(12.03m, json.GetProperty("subtotal").GetDecimal());
         Assert.Equal(0.97m, json.GetProperty("taxAmount").GetDecimal());
         Assert.Equal(13.00m, json.GetProperty("total").GetDecimal());
-        Assert.Equal(0, json.GetProperty("status").GetInt32()); // Open
+        Assert.Equal("Open", json.GetProperty("status").GetString());
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public class OrdersApiTests : IClassFixture<TestFixture>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(2, json.GetProperty("status").GetInt32()); // Voided
+        Assert.Equal("Voided", json.GetProperty("status").GetString());
     }
 
     [Fact]

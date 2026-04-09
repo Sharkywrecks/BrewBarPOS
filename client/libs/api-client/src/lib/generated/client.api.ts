@@ -20,97 +20,107 @@ export interface IClient {
    * @param body (optional)
    * @return OK
    */
-  login(body?: LoginDto | undefined): Observable<UserDto>;
+  auth_Login(body?: LoginDto | undefined): Observable<UserDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  pinLogin(body?: PinLoginDto | undefined): Observable<UserDto>;
+  auth_PinLogin(body?: PinLoginDto | undefined): Observable<UserDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  register(body?: RegisterDto | undefined): Observable<UserDto>;
+  auth_Register(body?: RegisterDto | undefined): Observable<UserDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  setup(body?: InitialSetupDto | undefined): Observable<UserDto>;
+  auth_InitialSetup(body?: InitialSetupDto | undefined): Observable<UserDto>;
   /**
    * @return OK
    */
-  current(): Observable<UserDto>;
+  auth_GetCurrentUser(): Observable<UserDto>;
   /**
    * @return OK
    */
-  staff(): Observable<StaffDto[]>;
+  auth_GetStaff(): Observable<StaffDto[]>;
   /**
    * @return OK
    */
-  users(): Observable<UserDto[]>;
+  auth_GetUsers(): Observable<UserDto[]>;
   /**
    * @return OK
    */
-  ready(): Observable<void>;
+  health_ready(): Observable<void>;
   /**
    * @param activeOnly (optional)
    * @return OK
    */
-  categoriesAll(activeOnly?: boolean | undefined): Observable<CategoryDto[]>;
+  categories_GetCategories(activeOnly?: boolean | undefined): Observable<CategoryDto[]>;
   /**
    * @param body (optional)
    * @return OK
    */
-  categoriesPOST(body?: CreateCategoryDto | undefined): Observable<CategoryDto>;
+  categories_CreateCategory(body?: CreateCategoryDto | undefined): Observable<CategoryDto>;
   /**
    * @return OK
    */
-  categoriesGET(id: number): Observable<CategoryDetailDto>;
+  categories_GetCategory(id: number): Observable<CategoryDetailDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  categoriesPUT(id: number, body?: UpdateCategoryDto | undefined): Observable<CategoryDto>;
+  categories_UpdateCategory(
+    id: number,
+    body?: UpdateCategoryDto | undefined,
+  ): Observable<CategoryDto>;
   /**
    * @return OK
    */
-  categoriesDELETE(id: number): Observable<void>;
+  categories_DeleteCategory(id: number): Observable<void>;
   /**
    * @param file (optional)
    * @return OK
    */
-  menuImport(file?: FileParameter | undefined): Observable<MenuImportResult>;
+  menuImport_Import(file?: FileParameter | undefined): Observable<MenuImportResult>;
   /**
    * @return OK
    */
-  template(): Observable<void>;
+  menuImport_Export(): Observable<void>;
   /**
    * @return OK
    */
-  modifiersAll(): Observable<ModifierDto[]>;
-  /**
-   * @param body (optional)
-   * @return OK
-   */
-  modifiersPOST(body?: CreateModifierDto | undefined): Observable<ModifierDto>;
+  menuImport_GetTemplate(): Observable<void>;
   /**
    * @return OK
    */
-  modifiersGET(id: number): Observable<ModifierDto>;
+  modifiers_GetModifiers(): Observable<ModifierDto[]>;
   /**
    * @param body (optional)
    * @return OK
    */
-  modifiersPUT(id: number, body?: UpdateModifierDto | undefined): Observable<ModifierDto>;
+  modifiers_CreateModifier(body?: CreateModifierDto | undefined): Observable<ModifierDto>;
   /**
    * @return OK
    */
-  modifiersDELETE(id: number): Observable<void>;
+  modifiers_GetModifier(id: number): Observable<ModifierDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  optionsPOST(
+  modifiers_UpdateModifier(
+    id: number,
+    body?: UpdateModifierDto | undefined,
+  ): Observable<ModifierDto>;
+  /**
+   * @return OK
+   */
+  modifiers_DeleteModifier(id: number): Observable<void>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  modifiers_CreateOption(
     modifierId: number,
     body?: CreateModifierOptionDto | undefined,
   ): Observable<ModifierOptionDto>;
@@ -118,7 +128,7 @@ export interface IClient {
    * @param body (optional)
    * @return OK
    */
-  optionsPUT(
+  modifiers_UpdateOption(
     modifierId: number,
     optionId: number,
     body?: UpdateModifierOptionDto | undefined,
@@ -126,7 +136,7 @@ export interface IClient {
   /**
    * @return OK
    */
-  optionsDELETE(modifierId: number, optionId: number): Observable<void>;
+  modifiers_DeleteOption(modifierId: number, optionId: number): Observable<void>;
   /**
    * @param status (optional)
    * @param from (optional)
@@ -135,53 +145,53 @@ export interface IClient {
    * @param pageSize (optional)
    * @return OK
    */
-  ordersGET(
+  orders_GetOrders(
     status?: OrderStatus | undefined,
     from?: Date | undefined,
     to?: Date | undefined,
     pageIndex?: number | undefined,
     pageSize?: number | undefined,
-  ): Observable<OrderDtoPagination>;
+  ): Observable<PaginationOfOrderDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  ordersPOST(body?: CreateOrderDto | undefined): Observable<OrderDto>;
+  orders_CreateOrder(body?: CreateOrderDto | undefined): Observable<OrderDto>;
   /**
    * @return OK
    */
-  ordersGET2(id: number): Observable<OrderDto>;
+  orders_GetOrder(id: number): Observable<OrderDto>;
   /**
    * @return OK
    */
-  byLocalId(localId: string): Observable<OrderDto>;
-  /**
-   * @param body (optional)
-   * @return OK
-   */
-  void(id: number, body?: VoidOrderDto | undefined): Observable<OrderDto>;
+  orders_GetOrderByLocalId(localId: string): Observable<OrderDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  paymentsPOST(body?: CreatePaymentDto | undefined): Observable<PaymentDto>;
-  /**
-   * @return OK
-   */
-  paymentsGET(id: number): Observable<PaymentDto>;
-  /**
-   * @return OK
-   */
-  byOrder(orderId: number): Observable<PaymentDto[]>;
+  orders_VoidOrder(id: number, body?: VoidOrderDto | undefined): Observable<OrderDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  refund(body?: CreateRefundDto | undefined): Observable<RefundDto>;
+  payments_CreatePayment(body?: CreatePaymentDto | undefined): Observable<PaymentDto>;
   /**
    * @return OK
    */
-  byOrder2(orderId: number): Observable<RefundDto[]>;
+  payments_GetPayment(id: number): Observable<PaymentDto>;
+  /**
+   * @return OK
+   */
+  payments_GetPaymentsByOrder(orderId: number): Observable<PaymentDto[]>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  payments_CreateRefund(body?: CreateRefundDto | undefined): Observable<RefundDto>;
+  /**
+   * @return OK
+   */
+  payments_GetRefundsByOrder(orderId: number): Observable<RefundDto[]>;
   /**
    * @param categoryId (optional)
    * @param availableOnly (optional)
@@ -189,41 +199,44 @@ export interface IClient {
    * @param pageSize (optional)
    * @return OK
    */
-  productsGET(
+  products_GetProducts(
     categoryId?: number | undefined,
     availableOnly?: boolean | undefined,
     pageIndex?: number | undefined,
     pageSize?: number | undefined,
-  ): Observable<ProductDtoPagination>;
+  ): Observable<PaginationOfProductDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  productsPOST(body?: CreateProductDto | undefined): Observable<ProductDto>;
+  products_CreateProduct(body?: CreateProductDto | undefined): Observable<ProductDto>;
   /**
    * @return OK
    */
-  productsGET2(id: number): Observable<ProductDto>;
+  products_GetProduct(id: number): Observable<ProductDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  productsPUT(id: number, body?: UpdateProductDto | undefined): Observable<ProductDto>;
+  products_UpdateProduct(id: number, body?: UpdateProductDto | undefined): Observable<ProductDto>;
   /**
    * @return OK
    */
-  productsDELETE(id: number): Observable<void>;
+  products_DeleteProduct(id: number): Observable<void>;
   /**
    * @param barcode (optional)
    * @param sku (optional)
    * @return OK
    */
-  lookup(barcode?: string | undefined, sku?: string | undefined): Observable<ProductDto>;
+  products_LookupProduct(
+    barcode?: string | undefined,
+    sku?: string | undefined,
+  ): Observable<ProductDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  variantsPOST(
+  products_CreateVariant(
     productId: number,
     body?: CreateProductVariantDto | undefined,
   ): Observable<ProductVariantDto>;
@@ -231,7 +244,7 @@ export interface IClient {
    * @param body (optional)
    * @return OK
    */
-  variantsPUT(
+  products_UpdateVariant(
     productId: number,
     variantId: number,
     body?: UpdateProductVariantDto | undefined,
@@ -239,33 +252,36 @@ export interface IClient {
   /**
    * @return OK
    */
-  variantsDELETE(productId: number, variantId: number): Observable<void>;
+  products_DeleteVariant(productId: number, variantId: number): Observable<void>;
   /**
    * @return OK
    */
-  modifiersPOST(productId: number, modifierId: number): Observable<void>;
+  products_AssignModifier(productId: number, modifierId: number): Observable<void>;
   /**
    * @return OK
    */
-  modifiersDELETE(productId: number, modifierId: number): Observable<void>;
+  products_RemoveModifier(productId: number, modifierId: number): Observable<void>;
   /**
    * @param date (optional)
    * @return OK
    */
-  daily(date?: Date | undefined): Observable<DailySalesReportDto>;
+  reports_GetDailyReport(date?: Date | undefined): Observable<DailySalesReportDto>;
   /**
    * @param from (optional)
    * @param to (optional)
    * @return OK
    */
-  sales(from?: Date | undefined, to?: Date | undefined): Observable<SalesRangeReportDto>;
+  reports_GetSalesRange(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<SalesRangeReportDto>;
   /**
    * @param from (optional)
    * @param to (optional)
    * @param limit (optional)
    * @return OK
    */
-  products(
+  reports_GetProductPerformance(
     from?: Date | undefined,
     to?: Date | undefined,
     limit?: number | undefined,
@@ -275,51 +291,56 @@ export interface IClient {
    * @param to (optional)
    * @return OK
    */
-  payments(from?: Date | undefined, to?: Date | undefined): Observable<PaymentSummaryReportDto>;
+  reports_GetPaymentSummary(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<PaymentSummaryReportDto>;
   /**
    * @return OK
    */
-  settingsGET(): Observable<BusinessSettingsDto>;
-  /**
-   * @param body (optional)
-   * @return OK
-   */
-  settingsPUT(body?: UpdateBusinessSettingsDto | undefined): Observable<BusinessSettingsDto>;
+  settings_GetSettings(): Observable<BusinessSettingsDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  open(body?: OpenShiftDto | undefined): Observable<RegisterShiftDto>;
+  settings_UpdateSettings(
+    body?: UpdateBusinessSettingsDto | undefined,
+  ): Observable<BusinessSettingsDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  close(id: number, body?: CloseShiftDto | undefined): Observable<RegisterShiftDto>;
+  shifts_OpenShift(body?: OpenShiftDto | undefined): Observable<RegisterShiftDto>;
   /**
    * @param body (optional)
    * @return OK
    */
-  cashDrop(id: number, body?: CreateCashDropDto | undefined): Observable<CashDropDto>;
+  shifts_CloseShift(id: number, body?: CloseShiftDto | undefined): Observable<RegisterShiftDto>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  shifts_AddCashDrop(id: number, body?: CreateCashDropDto | undefined): Observable<CashDropDto>;
   /**
    * @param terminalId (optional)
    * @return OK
    */
-  current2(terminalId?: number | undefined): Observable<RegisterShiftDto>;
+  shifts_GetCurrentShift(terminalId?: number | undefined): Observable<RegisterShiftDto>;
   /**
    * @return OK
    */
-  shifts(id: number): Observable<RegisterShiftDto>;
+  shifts_GetShift(id: number): Observable<RegisterShiftDto>;
   /**
    * @return OK
    */
-  report(id: number): Observable<ShiftReportDto>;
+  shifts_GetShiftReport(id: number): Observable<ShiftReportDto>;
   /**
    * @param terminalId (optional)
    * @param from (optional)
    * @param to (optional)
    * @return OK
    */
-  shiftsAll(
+  shifts_GetShifts(
     terminalId?: number | undefined,
     from?: Date | undefined,
     to?: Date | undefined,
@@ -344,7 +365,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  login(body?: LoginDto | undefined): Observable<UserDto> {
+  auth_Login(body?: LoginDto | undefined): Observable<UserDto> {
     let url_ = this.baseUrl + '/api/Auth/login';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -364,14 +385,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processLogin(response_);
+          return this.processAuth_Login(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processLogin(response_ as any);
+              return this.processAuth_Login(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto>;
             }
@@ -380,7 +401,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processLogin(response: HttpResponseBase): Observable<UserDto> {
+  protected processAuth_Login(response: HttpResponseBase): Observable<UserDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -435,7 +456,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  pinLogin(body?: PinLoginDto | undefined): Observable<UserDto> {
+  auth_PinLogin(body?: PinLoginDto | undefined): Observable<UserDto> {
     let url_ = this.baseUrl + '/api/Auth/pin-login';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -455,14 +476,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processPinLogin(response_);
+          return this.processAuth_PinLogin(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processPinLogin(response_ as any);
+              return this.processAuth_PinLogin(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto>;
             }
@@ -471,7 +492,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processPinLogin(response: HttpResponseBase): Observable<UserDto> {
+  protected processAuth_PinLogin(response: HttpResponseBase): Observable<UserDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -526,7 +547,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  register(body?: RegisterDto | undefined): Observable<UserDto> {
+  auth_Register(body?: RegisterDto | undefined): Observable<UserDto> {
     let url_ = this.baseUrl + '/api/Auth/register';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -546,14 +567,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processRegister(response_);
+          return this.processAuth_Register(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processRegister(response_ as any);
+              return this.processAuth_Register(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto>;
             }
@@ -562,7 +583,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processRegister(response: HttpResponseBase): Observable<UserDto> {
+  protected processAuth_Register(response: HttpResponseBase): Observable<UserDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -617,7 +638,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  setup(body?: InitialSetupDto | undefined): Observable<UserDto> {
+  auth_InitialSetup(body?: InitialSetupDto | undefined): Observable<UserDto> {
     let url_ = this.baseUrl + '/api/Auth/setup';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -637,14 +658,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processSetup(response_);
+          return this.processAuth_InitialSetup(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processSetup(response_ as any);
+              return this.processAuth_InitialSetup(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto>;
             }
@@ -653,7 +674,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processSetup(response: HttpResponseBase): Observable<UserDto> {
+  protected processAuth_InitialSetup(response: HttpResponseBase): Observable<UserDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -707,7 +728,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  current(): Observable<UserDto> {
+  auth_GetCurrentUser(): Observable<UserDto> {
     let url_ = this.baseUrl + '/api/Auth/current';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -723,14 +744,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCurrent(response_);
+          return this.processAuth_GetCurrentUser(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCurrent(response_ as any);
+              return this.processAuth_GetCurrentUser(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto>;
             }
@@ -739,7 +760,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCurrent(response: HttpResponseBase): Observable<UserDto> {
+  protected processAuth_GetCurrentUser(response: HttpResponseBase): Observable<UserDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -793,7 +814,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  staff(): Observable<StaffDto[]> {
+  auth_GetStaff(): Observable<StaffDto[]> {
     let url_ = this.baseUrl + '/api/Auth/staff';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -809,14 +830,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processStaff(response_);
+          return this.processAuth_GetStaff(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processStaff(response_ as any);
+              return this.processAuth_GetStaff(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<StaffDto[]>;
             }
@@ -825,7 +846,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processStaff(response: HttpResponseBase): Observable<StaffDto[]> {
+  protected processAuth_GetStaff(response: HttpResponseBase): Observable<StaffDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -879,7 +900,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  users(): Observable<UserDto[]> {
+  auth_GetUsers(): Observable<UserDto[]> {
     let url_ = this.baseUrl + '/api/Auth/users';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -895,14 +916,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processUsers(response_);
+          return this.processAuth_GetUsers(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processUsers(response_ as any);
+              return this.processAuth_GetUsers(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<UserDto[]>;
             }
@@ -911,7 +932,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processUsers(response: HttpResponseBase): Observable<UserDto[]> {
+  protected processAuth_GetUsers(response: HttpResponseBase): Observable<UserDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -965,7 +986,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  ready(): Observable<void> {
+  health_ready(): Observable<void> {
     let url_ = this.baseUrl + '/health/ready';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -979,14 +1000,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processReady(response_);
+          return this.processHealth_ready(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processReady(response_ as any);
+              return this.processHealth_ready(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -995,7 +1016,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processReady(response: HttpResponseBase): Observable<void> {
+  protected processHealth_ready(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1040,7 +1061,7 @@ export class Client implements IClient {
    * @param activeOnly (optional)
    * @return OK
    */
-  categoriesAll(activeOnly?: boolean | undefined): Observable<CategoryDto[]> {
+  categories_GetCategories(activeOnly?: boolean | undefined): Observable<CategoryDto[]> {
     let url_ = this.baseUrl + '/api/Categories?';
     if (activeOnly === null) throw new Error("The parameter 'activeOnly' cannot be null.");
     else if (activeOnly !== undefined)
@@ -1059,14 +1080,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCategoriesAll(response_);
+          return this.processCategories_GetCategories(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCategoriesAll(response_ as any);
+              return this.processCategories_GetCategories(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<CategoryDto[]>;
             }
@@ -1075,7 +1096,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCategoriesAll(response: HttpResponseBase): Observable<CategoryDto[]> {
+  protected processCategories_GetCategories(response: HttpResponseBase): Observable<CategoryDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1130,7 +1151,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  categoriesPOST(body?: CreateCategoryDto | undefined): Observable<CategoryDto> {
+  categories_CreateCategory(body?: CreateCategoryDto | undefined): Observable<CategoryDto> {
     let url_ = this.baseUrl + '/api/Categories';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -1150,14 +1171,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCategoriesPOST(response_);
+          return this.processCategories_CreateCategory(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCategoriesPOST(response_ as any);
+              return this.processCategories_CreateCategory(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<CategoryDto>;
             }
@@ -1166,7 +1187,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCategoriesPOST(response: HttpResponseBase): Observable<CategoryDto> {
+  protected processCategories_CreateCategory(response: HttpResponseBase): Observable<CategoryDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1220,7 +1241,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  categoriesGET(id: number): Observable<CategoryDetailDto> {
+  categories_GetCategory(id: number): Observable<CategoryDetailDto> {
     let url_ = this.baseUrl + '/api/Categories/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -1238,14 +1259,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCategoriesGET(response_);
+          return this.processCategories_GetCategory(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCategoriesGET(response_ as any);
+              return this.processCategories_GetCategory(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<CategoryDetailDto>;
             }
@@ -1254,7 +1275,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processCategoriesGET(response: HttpResponseBase): Observable<CategoryDetailDto> {
+  protected processCategories_GetCategory(
+    response: HttpResponseBase,
+  ): Observable<CategoryDetailDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1309,7 +1332,10 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  categoriesPUT(id: number, body?: UpdateCategoryDto | undefined): Observable<CategoryDto> {
+  categories_UpdateCategory(
+    id: number,
+    body?: UpdateCategoryDto | undefined,
+  ): Observable<CategoryDto> {
     let url_ = this.baseUrl + '/api/Categories/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -1331,14 +1357,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCategoriesPUT(response_);
+          return this.processCategories_UpdateCategory(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCategoriesPUT(response_ as any);
+              return this.processCategories_UpdateCategory(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<CategoryDto>;
             }
@@ -1347,7 +1373,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCategoriesPUT(response: HttpResponseBase): Observable<CategoryDto> {
+  protected processCategories_UpdateCategory(response: HttpResponseBase): Observable<CategoryDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1401,7 +1427,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  categoriesDELETE(id: number): Observable<void> {
+  categories_DeleteCategory(id: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Categories/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -1417,14 +1443,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCategoriesDELETE(response_);
+          return this.processCategories_DeleteCategory(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCategoriesDELETE(response_ as any);
+              return this.processCategories_DeleteCategory(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -1433,7 +1459,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCategoriesDELETE(response: HttpResponseBase): Observable<void> {
+  protected processCategories_DeleteCategory(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1478,7 +1504,7 @@ export class Client implements IClient {
    * @param file (optional)
    * @return OK
    */
-  menuImport(file?: FileParameter | undefined): Observable<MenuImportResult> {
+  menuImport_Import(file?: FileParameter | undefined): Observable<MenuImportResult> {
     let url_ = this.baseUrl + '/api/MenuImport';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -1500,14 +1526,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processMenuImport(response_);
+          return this.processMenuImport_Import(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processMenuImport(response_ as any);
+              return this.processMenuImport_Import(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<MenuImportResult>;
             }
@@ -1516,7 +1542,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processMenuImport(response: HttpResponseBase): Observable<MenuImportResult> {
+  protected processMenuImport_Import(response: HttpResponseBase): Observable<MenuImportResult> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1570,8 +1596,8 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  template(): Observable<void> {
-    let url_ = this.baseUrl + '/api/MenuImport/template';
+  menuImport_Export(): Observable<void> {
+    let url_ = this.baseUrl + '/api/MenuImport/export';
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: any = {
@@ -1584,14 +1610,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processTemplate(response_);
+          return this.processMenuImport_Export(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processTemplate(response_ as any);
+              return this.processMenuImport_Export(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -1600,7 +1626,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processTemplate(response: HttpResponseBase): Observable<void> {
+  protected processMenuImport_Export(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1644,7 +1670,81 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  modifiersAll(): Observable<ModifierDto[]> {
+  menuImport_GetTemplate(): Observable<void> {
+    let url_ = this.baseUrl + '/api/MenuImport/template';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({}),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processMenuImport_GetTemplate(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processMenuImport_GetTemplate(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processMenuImport_GetTemplate(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  modifiers_GetModifiers(): Observable<ModifierDto[]> {
     let url_ = this.baseUrl + '/api/Modifiers';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -1660,14 +1760,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersAll(response_);
+          return this.processModifiers_GetModifiers(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersAll(response_ as any);
+              return this.processModifiers_GetModifiers(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierDto[]>;
             }
@@ -1676,7 +1776,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersAll(response: HttpResponseBase): Observable<ModifierDto[]> {
+  protected processModifiers_GetModifiers(response: HttpResponseBase): Observable<ModifierDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1731,7 +1831,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  modifiersPOST(body?: CreateModifierDto | undefined): Observable<ModifierDto> {
+  modifiers_CreateModifier(body?: CreateModifierDto | undefined): Observable<ModifierDto> {
     let url_ = this.baseUrl + '/api/Modifiers';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -1751,14 +1851,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersPOST(response_);
+          return this.processModifiers_CreateModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersPOST(response_ as any);
+              return this.processModifiers_CreateModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierDto>;
             }
@@ -1767,7 +1867,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersPOST(response: HttpResponseBase): Observable<ModifierDto> {
+  protected processModifiers_CreateModifier(response: HttpResponseBase): Observable<ModifierDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1821,7 +1921,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  modifiersGET(id: number): Observable<ModifierDto> {
+  modifiers_GetModifier(id: number): Observable<ModifierDto> {
     let url_ = this.baseUrl + '/api/Modifiers/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -1839,14 +1939,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersGET(response_);
+          return this.processModifiers_GetModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersGET(response_ as any);
+              return this.processModifiers_GetModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierDto>;
             }
@@ -1855,7 +1955,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersGET(response: HttpResponseBase): Observable<ModifierDto> {
+  protected processModifiers_GetModifier(response: HttpResponseBase): Observable<ModifierDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -1910,7 +2010,10 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  modifiersPUT(id: number, body?: UpdateModifierDto | undefined): Observable<ModifierDto> {
+  modifiers_UpdateModifier(
+    id: number,
+    body?: UpdateModifierDto | undefined,
+  ): Observable<ModifierDto> {
     let url_ = this.baseUrl + '/api/Modifiers/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -1932,14 +2035,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersPUT(response_);
+          return this.processModifiers_UpdateModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersPUT(response_ as any);
+              return this.processModifiers_UpdateModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierDto>;
             }
@@ -1948,7 +2051,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersPUT(response: HttpResponseBase): Observable<ModifierDto> {
+  protected processModifiers_UpdateModifier(response: HttpResponseBase): Observable<ModifierDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2002,7 +2105,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  modifiersDELETE(id: number): Observable<void> {
+  modifiers_DeleteModifier(id: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Modifiers/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -2018,14 +2121,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersDELETE(response_);
+          return this.processModifiers_DeleteModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersDELETE(response_ as any);
+              return this.processModifiers_DeleteModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -2034,7 +2137,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersDELETE(response: HttpResponseBase): Observable<void> {
+  protected processModifiers_DeleteModifier(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2079,7 +2182,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  optionsPOST(
+  modifiers_CreateOption(
     modifierId: number,
     body?: CreateModifierOptionDto | undefined,
   ): Observable<ModifierOptionDto> {
@@ -2105,14 +2208,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOptionsPOST(response_);
+          return this.processModifiers_CreateOption(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOptionsPOST(response_ as any);
+              return this.processModifiers_CreateOption(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierOptionDto>;
             }
@@ -2121,7 +2224,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processOptionsPOST(response: HttpResponseBase): Observable<ModifierOptionDto> {
+  protected processModifiers_CreateOption(
+    response: HttpResponseBase,
+  ): Observable<ModifierOptionDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2176,7 +2281,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  optionsPUT(
+  modifiers_UpdateOption(
     modifierId: number,
     optionId: number,
     body?: UpdateModifierOptionDto | undefined,
@@ -2206,14 +2311,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOptionsPUT(response_);
+          return this.processModifiers_UpdateOption(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOptionsPUT(response_ as any);
+              return this.processModifiers_UpdateOption(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ModifierOptionDto>;
             }
@@ -2222,7 +2327,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processOptionsPUT(response: HttpResponseBase): Observable<ModifierOptionDto> {
+  protected processModifiers_UpdateOption(
+    response: HttpResponseBase,
+  ): Observable<ModifierOptionDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2276,7 +2383,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  optionsDELETE(modifierId: number, optionId: number): Observable<void> {
+  modifiers_DeleteOption(modifierId: number, optionId: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Modifiers/{modifierId}/options/{optionId}';
     if (modifierId === undefined || modifierId === null)
       throw new Error("The parameter 'modifierId' must be defined.");
@@ -2296,14 +2403,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOptionsDELETE(response_);
+          return this.processModifiers_DeleteOption(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOptionsDELETE(response_ as any);
+              return this.processModifiers_DeleteOption(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -2312,7 +2419,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processOptionsDELETE(response: HttpResponseBase): Observable<void> {
+  protected processModifiers_DeleteOption(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2361,13 +2468,13 @@ export class Client implements IClient {
    * @param pageSize (optional)
    * @return OK
    */
-  ordersGET(
+  orders_GetOrders(
     status?: OrderStatus | undefined,
     from?: Date | undefined,
     to?: Date | undefined,
     pageIndex?: number | undefined,
     pageSize?: number | undefined,
-  ): Observable<OrderDtoPagination> {
+  ): Observable<PaginationOfOrderDto> {
     let url_ = this.baseUrl + '/api/Orders?';
     if (status === null) throw new Error("The parameter 'status' cannot be null.");
     else if (status !== undefined) url_ += 'status=' + encodeURIComponent('' + status) + '&';
@@ -2396,27 +2503,27 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOrdersGET(response_);
+          return this.processOrders_GetOrders(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOrdersGET(response_ as any);
+              return this.processOrders_GetOrders(response_ as any);
             } catch (e) {
-              return _observableThrow(e) as any as Observable<OrderDtoPagination>;
+              return _observableThrow(e) as any as Observable<PaginationOfOrderDto>;
             }
-          } else return _observableThrow(response_) as any as Observable<OrderDtoPagination>;
+          } else return _observableThrow(response_) as any as Observable<PaginationOfOrderDto>;
         }),
       );
   }
 
-  protected processOrdersGET(response: HttpResponseBase): Observable<OrderDtoPagination> {
+  protected processOrders_GetOrders(response: HttpResponseBase): Observable<PaginationOfOrderDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
-      return _observableOf(response.body as OrderDtoPagination);
+      return _observableOf(response.body as PaginationOfOrderDto);
     }
 
     const responseBlob =
@@ -2440,7 +2547,7 @@ export class Client implements IClient {
             result200 = null;
           } else {
             try {
-              result200 = JSON.parse(_responseText, this.jsonParseReviver) as OrderDtoPagination;
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PaginationOfOrderDto;
             } catch (e) {
               throw new Error('Failed to parse JSON response: ' + _responseText);
             }
@@ -2467,7 +2574,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  ordersPOST(body?: CreateOrderDto | undefined): Observable<OrderDto> {
+  orders_CreateOrder(body?: CreateOrderDto | undefined): Observable<OrderDto> {
     let url_ = this.baseUrl + '/api/Orders';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -2487,14 +2594,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOrdersPOST(response_);
+          return this.processOrders_CreateOrder(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOrdersPOST(response_ as any);
+              return this.processOrders_CreateOrder(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<OrderDto>;
             }
@@ -2503,7 +2610,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processOrdersPOST(response: HttpResponseBase): Observable<OrderDto> {
+  protected processOrders_CreateOrder(response: HttpResponseBase): Observable<OrderDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2557,7 +2664,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  ordersGET2(id: number): Observable<OrderDto> {
+  orders_GetOrder(id: number): Observable<OrderDto> {
     let url_ = this.baseUrl + '/api/Orders/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -2575,14 +2682,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOrdersGET2(response_);
+          return this.processOrders_GetOrder(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOrdersGET2(response_ as any);
+              return this.processOrders_GetOrder(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<OrderDto>;
             }
@@ -2591,7 +2698,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processOrdersGET2(response: HttpResponseBase): Observable<OrderDto> {
+  protected processOrders_GetOrder(response: HttpResponseBase): Observable<OrderDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2645,7 +2752,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  byLocalId(localId: string): Observable<OrderDto> {
+  orders_GetOrderByLocalId(localId: string): Observable<OrderDto> {
     let url_ = this.baseUrl + '/api/Orders/by-local-id/{localId}';
     if (localId === undefined || localId === null)
       throw new Error("The parameter 'localId' must be defined.");
@@ -2664,14 +2771,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processByLocalId(response_);
+          return this.processOrders_GetOrderByLocalId(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processByLocalId(response_ as any);
+              return this.processOrders_GetOrderByLocalId(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<OrderDto>;
             }
@@ -2680,7 +2787,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processByLocalId(response: HttpResponseBase): Observable<OrderDto> {
+  protected processOrders_GetOrderByLocalId(response: HttpResponseBase): Observable<OrderDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2735,7 +2842,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  void(id: number, body?: VoidOrderDto | undefined): Observable<OrderDto> {
+  orders_VoidOrder(id: number, body?: VoidOrderDto | undefined): Observable<OrderDto> {
     let url_ = this.baseUrl + '/api/Orders/{id}/void';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -2757,14 +2864,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processVoid(response_);
+          return this.processOrders_VoidOrder(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processVoid(response_ as any);
+              return this.processOrders_VoidOrder(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<OrderDto>;
             }
@@ -2773,7 +2880,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processVoid(response: HttpResponseBase): Observable<OrderDto> {
+  protected processOrders_VoidOrder(response: HttpResponseBase): Observable<OrderDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2828,7 +2935,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  paymentsPOST(body?: CreatePaymentDto | undefined): Observable<PaymentDto> {
+  payments_CreatePayment(body?: CreatePaymentDto | undefined): Observable<PaymentDto> {
     let url_ = this.baseUrl + '/api/Payments';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -2848,14 +2955,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processPaymentsPOST(response_);
+          return this.processPayments_CreatePayment(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processPaymentsPOST(response_ as any);
+              return this.processPayments_CreatePayment(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<PaymentDto>;
             }
@@ -2864,7 +2971,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processPaymentsPOST(response: HttpResponseBase): Observable<PaymentDto> {
+  protected processPayments_CreatePayment(response: HttpResponseBase): Observable<PaymentDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -2918,7 +3025,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  paymentsGET(id: number): Observable<PaymentDto> {
+  payments_GetPayment(id: number): Observable<PaymentDto> {
     let url_ = this.baseUrl + '/api/Payments/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -2936,14 +3043,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processPaymentsGET(response_);
+          return this.processPayments_GetPayment(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processPaymentsGET(response_ as any);
+              return this.processPayments_GetPayment(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<PaymentDto>;
             }
@@ -2952,7 +3059,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processPaymentsGET(response: HttpResponseBase): Observable<PaymentDto> {
+  protected processPayments_GetPayment(response: HttpResponseBase): Observable<PaymentDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3006,7 +3113,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  byOrder(orderId: number): Observable<PaymentDto[]> {
+  payments_GetPaymentsByOrder(orderId: number): Observable<PaymentDto[]> {
     let url_ = this.baseUrl + '/api/Payments/by-order/{orderId}';
     if (orderId === undefined || orderId === null)
       throw new Error("The parameter 'orderId' must be defined.");
@@ -3025,14 +3132,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processByOrder(response_);
+          return this.processPayments_GetPaymentsByOrder(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processByOrder(response_ as any);
+              return this.processPayments_GetPaymentsByOrder(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<PaymentDto[]>;
             }
@@ -3041,7 +3148,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processByOrder(response: HttpResponseBase): Observable<PaymentDto[]> {
+  protected processPayments_GetPaymentsByOrder(
+    response: HttpResponseBase,
+  ): Observable<PaymentDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3096,7 +3205,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  refund(body?: CreateRefundDto | undefined): Observable<RefundDto> {
+  payments_CreateRefund(body?: CreateRefundDto | undefined): Observable<RefundDto> {
     let url_ = this.baseUrl + '/api/Payments/refund';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -3116,14 +3225,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processRefund(response_);
+          return this.processPayments_CreateRefund(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processRefund(response_ as any);
+              return this.processPayments_CreateRefund(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RefundDto>;
             }
@@ -3132,7 +3241,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processRefund(response: HttpResponseBase): Observable<RefundDto> {
+  protected processPayments_CreateRefund(response: HttpResponseBase): Observable<RefundDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3186,7 +3295,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  byOrder2(orderId: number): Observable<RefundDto[]> {
+  payments_GetRefundsByOrder(orderId: number): Observable<RefundDto[]> {
     let url_ = this.baseUrl + '/api/Payments/refunds/by-order/{orderId}';
     if (orderId === undefined || orderId === null)
       throw new Error("The parameter 'orderId' must be defined.");
@@ -3205,14 +3314,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processByOrder2(response_);
+          return this.processPayments_GetRefundsByOrder(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processByOrder2(response_ as any);
+              return this.processPayments_GetRefundsByOrder(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RefundDto[]>;
             }
@@ -3221,7 +3330,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processByOrder2(response: HttpResponseBase): Observable<RefundDto[]> {
+  protected processPayments_GetRefundsByOrder(response: HttpResponseBase): Observable<RefundDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3279,12 +3388,12 @@ export class Client implements IClient {
    * @param pageSize (optional)
    * @return OK
    */
-  productsGET(
+  products_GetProducts(
     categoryId?: number | undefined,
     availableOnly?: boolean | undefined,
     pageIndex?: number | undefined,
     pageSize?: number | undefined,
-  ): Observable<ProductDtoPagination> {
+  ): Observable<PaginationOfProductDto> {
     let url_ = this.baseUrl + '/api/Products?';
     if (categoryId === null) throw new Error("The parameter 'categoryId' cannot be null.");
     else if (categoryId !== undefined)
@@ -3311,27 +3420,29 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProductsGET(response_);
+          return this.processProducts_GetProducts(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProductsGET(response_ as any);
+              return this.processProducts_GetProducts(response_ as any);
             } catch (e) {
-              return _observableThrow(e) as any as Observable<ProductDtoPagination>;
+              return _observableThrow(e) as any as Observable<PaginationOfProductDto>;
             }
-          } else return _observableThrow(response_) as any as Observable<ProductDtoPagination>;
+          } else return _observableThrow(response_) as any as Observable<PaginationOfProductDto>;
         }),
       );
   }
 
-  protected processProductsGET(response: HttpResponseBase): Observable<ProductDtoPagination> {
+  protected processProducts_GetProducts(
+    response: HttpResponseBase,
+  ): Observable<PaginationOfProductDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
-      return _observableOf(response.body as ProductDtoPagination);
+      return _observableOf(response.body as PaginationOfProductDto);
     }
 
     const responseBlob =
@@ -3355,7 +3466,10 @@ export class Client implements IClient {
             result200 = null;
           } else {
             try {
-              result200 = JSON.parse(_responseText, this.jsonParseReviver) as ProductDtoPagination;
+              result200 = JSON.parse(
+                _responseText,
+                this.jsonParseReviver,
+              ) as PaginationOfProductDto;
             } catch (e) {
               throw new Error('Failed to parse JSON response: ' + _responseText);
             }
@@ -3382,7 +3496,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  productsPOST(body?: CreateProductDto | undefined): Observable<ProductDto> {
+  products_CreateProduct(body?: CreateProductDto | undefined): Observable<ProductDto> {
     let url_ = this.baseUrl + '/api/Products';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -3402,14 +3516,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProductsPOST(response_);
+          return this.processProducts_CreateProduct(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProductsPOST(response_ as any);
+              return this.processProducts_CreateProduct(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductDto>;
             }
@@ -3418,7 +3532,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processProductsPOST(response: HttpResponseBase): Observable<ProductDto> {
+  protected processProducts_CreateProduct(response: HttpResponseBase): Observable<ProductDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3472,7 +3586,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  productsGET2(id: number): Observable<ProductDto> {
+  products_GetProduct(id: number): Observable<ProductDto> {
     let url_ = this.baseUrl + '/api/Products/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -3490,14 +3604,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProductsGET2(response_);
+          return this.processProducts_GetProduct(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProductsGET2(response_ as any);
+              return this.processProducts_GetProduct(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductDto>;
             }
@@ -3506,7 +3620,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processProductsGET2(response: HttpResponseBase): Observable<ProductDto> {
+  protected processProducts_GetProduct(response: HttpResponseBase): Observable<ProductDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3561,7 +3675,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  productsPUT(id: number, body?: UpdateProductDto | undefined): Observable<ProductDto> {
+  products_UpdateProduct(id: number, body?: UpdateProductDto | undefined): Observable<ProductDto> {
     let url_ = this.baseUrl + '/api/Products/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -3583,14 +3697,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProductsPUT(response_);
+          return this.processProducts_UpdateProduct(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProductsPUT(response_ as any);
+              return this.processProducts_UpdateProduct(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductDto>;
             }
@@ -3599,7 +3713,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processProductsPUT(response: HttpResponseBase): Observable<ProductDto> {
+  protected processProducts_UpdateProduct(response: HttpResponseBase): Observable<ProductDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3653,7 +3767,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  productsDELETE(id: number): Observable<void> {
+  products_DeleteProduct(id: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Products/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -3669,14 +3783,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProductsDELETE(response_);
+          return this.processProducts_DeleteProduct(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProductsDELETE(response_ as any);
+              return this.processProducts_DeleteProduct(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -3685,7 +3799,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processProductsDELETE(response: HttpResponseBase): Observable<void> {
+  protected processProducts_DeleteProduct(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3731,7 +3845,10 @@ export class Client implements IClient {
    * @param sku (optional)
    * @return OK
    */
-  lookup(barcode?: string | undefined, sku?: string | undefined): Observable<ProductDto> {
+  products_LookupProduct(
+    barcode?: string | undefined,
+    sku?: string | undefined,
+  ): Observable<ProductDto> {
     let url_ = this.baseUrl + '/api/Products/lookup?';
     if (barcode === null) throw new Error("The parameter 'barcode' cannot be null.");
     else if (barcode !== undefined) url_ += 'barcode=' + encodeURIComponent('' + barcode) + '&';
@@ -3751,14 +3868,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processLookup(response_);
+          return this.processProducts_LookupProduct(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processLookup(response_ as any);
+              return this.processProducts_LookupProduct(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductDto>;
             }
@@ -3767,7 +3884,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processLookup(response: HttpResponseBase): Observable<ProductDto> {
+  protected processProducts_LookupProduct(response: HttpResponseBase): Observable<ProductDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3822,7 +3939,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  variantsPOST(
+  products_CreateVariant(
     productId: number,
     body?: CreateProductVariantDto | undefined,
   ): Observable<ProductVariantDto> {
@@ -3848,14 +3965,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processVariantsPOST(response_);
+          return this.processProducts_CreateVariant(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processVariantsPOST(response_ as any);
+              return this.processProducts_CreateVariant(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductVariantDto>;
             }
@@ -3864,7 +3981,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processVariantsPOST(response: HttpResponseBase): Observable<ProductVariantDto> {
+  protected processProducts_CreateVariant(
+    response: HttpResponseBase,
+  ): Observable<ProductVariantDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -3919,7 +4038,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  variantsPUT(
+  products_UpdateVariant(
     productId: number,
     variantId: number,
     body?: UpdateProductVariantDto | undefined,
@@ -3949,14 +4068,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processVariantsPUT(response_);
+          return this.processProducts_UpdateVariant(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processVariantsPUT(response_ as any);
+              return this.processProducts_UpdateVariant(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductVariantDto>;
             }
@@ -3965,7 +4084,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processVariantsPUT(response: HttpResponseBase): Observable<ProductVariantDto> {
+  protected processProducts_UpdateVariant(
+    response: HttpResponseBase,
+  ): Observable<ProductVariantDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4019,7 +4140,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  variantsDELETE(productId: number, variantId: number): Observable<void> {
+  products_DeleteVariant(productId: number, variantId: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Products/{productId}/variants/{variantId}';
     if (productId === undefined || productId === null)
       throw new Error("The parameter 'productId' must be defined.");
@@ -4039,14 +4160,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processVariantsDELETE(response_);
+          return this.processProducts_DeleteVariant(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processVariantsDELETE(response_ as any);
+              return this.processProducts_DeleteVariant(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -4055,7 +4176,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processVariantsDELETE(response: HttpResponseBase): Observable<void> {
+  protected processProducts_DeleteVariant(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4099,7 +4220,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  modifiersPOST(productId: number, modifierId: number): Observable<void> {
+  products_AssignModifier(productId: number, modifierId: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Products/{productId}/modifiers/{modifierId}';
     if (productId === undefined || productId === null)
       throw new Error("The parameter 'productId' must be defined.");
@@ -4119,14 +4240,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersPOST(response_);
+          return this.processProducts_AssignModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersPOST(response_ as any);
+              return this.processProducts_AssignModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -4135,7 +4256,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersPOST(response: HttpResponseBase): Observable<void> {
+  protected processProducts_AssignModifier(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4179,7 +4300,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  modifiersDELETE(productId: number, modifierId: number): Observable<void> {
+  products_RemoveModifier(productId: number, modifierId: number): Observable<void> {
     let url_ = this.baseUrl + '/api/Products/{productId}/modifiers/{modifierId}';
     if (productId === undefined || productId === null)
       throw new Error("The parameter 'productId' must be defined.");
@@ -4199,14 +4320,14 @@ export class Client implements IClient {
       .request('delete', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processModifiersDELETE(response_);
+          return this.processProducts_RemoveModifier(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processModifiersDELETE(response_ as any);
+              return this.processProducts_RemoveModifier(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<void>;
             }
@@ -4215,7 +4336,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processModifiersDELETE(response: HttpResponseBase): Observable<void> {
+  protected processProducts_RemoveModifier(response: HttpResponseBase): Observable<void> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4260,7 +4381,7 @@ export class Client implements IClient {
    * @param date (optional)
    * @return OK
    */
-  daily(date?: Date | undefined): Observable<DailySalesReportDto> {
+  reports_GetDailyReport(date?: Date | undefined): Observable<DailySalesReportDto> {
     let url_ = this.baseUrl + '/api/Reports/daily?';
     if (date === null) throw new Error("The parameter 'date' cannot be null.");
     else if (date !== undefined)
@@ -4279,14 +4400,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processDaily(response_);
+          return this.processReports_GetDailyReport(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processDaily(response_ as any);
+              return this.processReports_GetDailyReport(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<DailySalesReportDto>;
             }
@@ -4295,7 +4416,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processDaily(response: HttpResponseBase): Observable<DailySalesReportDto> {
+  protected processReports_GetDailyReport(
+    response: HttpResponseBase,
+  ): Observable<DailySalesReportDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4351,7 +4474,10 @@ export class Client implements IClient {
    * @param to (optional)
    * @return OK
    */
-  sales(from?: Date | undefined, to?: Date | undefined): Observable<SalesRangeReportDto> {
+  reports_GetSalesRange(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<SalesRangeReportDto> {
     let url_ = this.baseUrl + '/api/Reports/sales?';
     if (from === null) throw new Error("The parameter 'from' cannot be null.");
     else if (from !== undefined)
@@ -4373,14 +4499,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processSales(response_);
+          return this.processReports_GetSalesRange(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processSales(response_ as any);
+              return this.processReports_GetSalesRange(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<SalesRangeReportDto>;
             }
@@ -4389,7 +4515,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processSales(response: HttpResponseBase): Observable<SalesRangeReportDto> {
+  protected processReports_GetSalesRange(
+    response: HttpResponseBase,
+  ): Observable<SalesRangeReportDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4446,7 +4574,7 @@ export class Client implements IClient {
    * @param limit (optional)
    * @return OK
    */
-  products(
+  reports_GetProductPerformance(
     from?: Date | undefined,
     to?: Date | undefined,
     limit?: number | undefined,
@@ -4474,14 +4602,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processProducts(response_);
+          return this.processReports_GetProductPerformance(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processProducts(response_ as any);
+              return this.processReports_GetProductPerformance(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ProductPerformanceDto[]>;
             }
@@ -4490,7 +4618,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processProducts(response: HttpResponseBase): Observable<ProductPerformanceDto[]> {
+  protected processReports_GetProductPerformance(
+    response: HttpResponseBase,
+  ): Observable<ProductPerformanceDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4549,7 +4679,10 @@ export class Client implements IClient {
    * @param to (optional)
    * @return OK
    */
-  payments(from?: Date | undefined, to?: Date | undefined): Observable<PaymentSummaryReportDto> {
+  reports_GetPaymentSummary(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<PaymentSummaryReportDto> {
     let url_ = this.baseUrl + '/api/Reports/payments?';
     if (from === null) throw new Error("The parameter 'from' cannot be null.");
     else if (from !== undefined)
@@ -4571,14 +4704,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processPayments(response_);
+          return this.processReports_GetPaymentSummary(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processPayments(response_ as any);
+              return this.processReports_GetPaymentSummary(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<PaymentSummaryReportDto>;
             }
@@ -4587,7 +4720,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processPayments(response: HttpResponseBase): Observable<PaymentSummaryReportDto> {
+  protected processReports_GetPaymentSummary(
+    response: HttpResponseBase,
+  ): Observable<PaymentSummaryReportDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4644,7 +4779,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  settingsGET(): Observable<BusinessSettingsDto> {
+  settings_GetSettings(): Observable<BusinessSettingsDto> {
     let url_ = this.baseUrl + '/api/Settings';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -4660,14 +4795,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processSettingsGET(response_);
+          return this.processSettings_GetSettings(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processSettingsGET(response_ as any);
+              return this.processSettings_GetSettings(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<BusinessSettingsDto>;
             }
@@ -4676,7 +4811,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processSettingsGET(response: HttpResponseBase): Observable<BusinessSettingsDto> {
+  protected processSettings_GetSettings(
+    response: HttpResponseBase,
+  ): Observable<BusinessSettingsDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4731,7 +4868,9 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  settingsPUT(body?: UpdateBusinessSettingsDto | undefined): Observable<BusinessSettingsDto> {
+  settings_UpdateSettings(
+    body?: UpdateBusinessSettingsDto | undefined,
+  ): Observable<BusinessSettingsDto> {
     let url_ = this.baseUrl + '/api/Settings';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -4751,14 +4890,14 @@ export class Client implements IClient {
       .request('put', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processSettingsPUT(response_);
+          return this.processSettings_UpdateSettings(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processSettingsPUT(response_ as any);
+              return this.processSettings_UpdateSettings(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<BusinessSettingsDto>;
             }
@@ -4767,7 +4906,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processSettingsPUT(response: HttpResponseBase): Observable<BusinessSettingsDto> {
+  protected processSettings_UpdateSettings(
+    response: HttpResponseBase,
+  ): Observable<BusinessSettingsDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4822,7 +4963,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  open(body?: OpenShiftDto | undefined): Observable<RegisterShiftDto> {
+  shifts_OpenShift(body?: OpenShiftDto | undefined): Observable<RegisterShiftDto> {
     let url_ = this.baseUrl + '/api/Shifts/open';
     url_ = url_.replace(/[?&]$/, '');
 
@@ -4842,14 +4983,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processOpen(response_);
+          return this.processShifts_OpenShift(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processOpen(response_ as any);
+              return this.processShifts_OpenShift(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RegisterShiftDto>;
             }
@@ -4858,7 +4999,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processOpen(response: HttpResponseBase): Observable<RegisterShiftDto> {
+  protected processShifts_OpenShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -4913,7 +5054,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  close(id: number, body?: CloseShiftDto | undefined): Observable<RegisterShiftDto> {
+  shifts_CloseShift(id: number, body?: CloseShiftDto | undefined): Observable<RegisterShiftDto> {
     let url_ = this.baseUrl + '/api/Shifts/{id}/close';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -4935,14 +5076,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processClose(response_);
+          return this.processShifts_CloseShift(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processClose(response_ as any);
+              return this.processShifts_CloseShift(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RegisterShiftDto>;
             }
@@ -4951,7 +5092,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processClose(response: HttpResponseBase): Observable<RegisterShiftDto> {
+  protected processShifts_CloseShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5006,7 +5147,7 @@ export class Client implements IClient {
    * @param body (optional)
    * @return OK
    */
-  cashDrop(id: number, body?: CreateCashDropDto | undefined): Observable<CashDropDto> {
+  shifts_AddCashDrop(id: number, body?: CreateCashDropDto | undefined): Observable<CashDropDto> {
     let url_ = this.baseUrl + '/api/Shifts/{id}/cash-drop';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -5028,14 +5169,14 @@ export class Client implements IClient {
       .request('post', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCashDrop(response_);
+          return this.processShifts_AddCashDrop(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCashDrop(response_ as any);
+              return this.processShifts_AddCashDrop(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<CashDropDto>;
             }
@@ -5044,7 +5185,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processCashDrop(response: HttpResponseBase): Observable<CashDropDto> {
+  protected processShifts_AddCashDrop(response: HttpResponseBase): Observable<CashDropDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5099,7 +5240,7 @@ export class Client implements IClient {
    * @param terminalId (optional)
    * @return OK
    */
-  current2(terminalId?: number | undefined): Observable<RegisterShiftDto> {
+  shifts_GetCurrentShift(terminalId?: number | undefined): Observable<RegisterShiftDto> {
     let url_ = this.baseUrl + '/api/Shifts/current?';
     if (terminalId === null) throw new Error("The parameter 'terminalId' cannot be null.");
     else if (terminalId !== undefined)
@@ -5118,14 +5259,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processCurrent2(response_);
+          return this.processShifts_GetCurrentShift(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processCurrent2(response_ as any);
+              return this.processShifts_GetCurrentShift(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RegisterShiftDto>;
             }
@@ -5134,7 +5275,9 @@ export class Client implements IClient {
       );
   }
 
-  protected processCurrent2(response: HttpResponseBase): Observable<RegisterShiftDto> {
+  protected processShifts_GetCurrentShift(
+    response: HttpResponseBase,
+  ): Observable<RegisterShiftDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5188,7 +5331,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  shifts(id: number): Observable<RegisterShiftDto> {
+  shifts_GetShift(id: number): Observable<RegisterShiftDto> {
     let url_ = this.baseUrl + '/api/Shifts/{id}';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -5206,14 +5349,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processShifts(response_);
+          return this.processShifts_GetShift(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processShifts(response_ as any);
+              return this.processShifts_GetShift(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RegisterShiftDto>;
             }
@@ -5222,7 +5365,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processShifts(response: HttpResponseBase): Observable<RegisterShiftDto> {
+  protected processShifts_GetShift(response: HttpResponseBase): Observable<RegisterShiftDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5276,7 +5419,7 @@ export class Client implements IClient {
   /**
    * @return OK
    */
-  report(id: number): Observable<ShiftReportDto> {
+  shifts_GetShiftReport(id: number): Observable<ShiftReportDto> {
     let url_ = this.baseUrl + '/api/Shifts/{id}/report';
     if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
@@ -5294,14 +5437,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processReport(response_);
+          return this.processShifts_GetShiftReport(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processReport(response_ as any);
+              return this.processShifts_GetShiftReport(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<ShiftReportDto>;
             }
@@ -5310,7 +5453,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processReport(response: HttpResponseBase): Observable<ShiftReportDto> {
+  protected processShifts_GetShiftReport(response: HttpResponseBase): Observable<ShiftReportDto> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5367,7 +5510,7 @@ export class Client implements IClient {
    * @param to (optional)
    * @return OK
    */
-  shiftsAll(
+  shifts_GetShifts(
     terminalId?: number | undefined,
     from?: Date | undefined,
     to?: Date | undefined,
@@ -5396,14 +5539,14 @@ export class Client implements IClient {
       .request('get', url_, options_)
       .pipe(
         _observableMergeMap((response_: any) => {
-          return this.processShiftsAll(response_);
+          return this.processShifts_GetShifts(response_);
         }),
       )
       .pipe(
         _observableCatch((response_: any) => {
           if (response_ instanceof HttpResponseBase) {
             try {
-              return this.processShiftsAll(response_ as any);
+              return this.processShifts_GetShifts(response_ as any);
             } catch (e) {
               return _observableThrow(e) as any as Observable<RegisterShiftDto[]>;
             }
@@ -5412,7 +5555,7 @@ export class Client implements IClient {
       );
   }
 
-  protected processShiftsAll(response: HttpResponseBase): Observable<RegisterShiftDto[]> {
+  protected processShifts_GetShifts(response: HttpResponseBase): Observable<RegisterShiftDto[]> {
     const status = response.status;
     // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
     if (response instanceof HttpResponse && response.body !== undefined) {
@@ -5605,11 +5748,11 @@ export interface CreateRefundLineItemDto {
 }
 
 export enum Currency {
-  _0 = 0,
-  _1 = 1,
-  _2 = 2,
-  _3 = 3,
-  _4 = 4,
+  SCR = 'SCR',
+  USD = 'USD',
+  EUR = 'EUR',
+  GBP = 'GBP',
+  AED = 'AED',
 }
 
 export interface DailySalesPointDto {
@@ -5633,8 +5776,8 @@ export interface DailySalesReportDto {
 }
 
 export enum DiscountType {
-  _0 = 0,
-  _1 = 1,
+  Percentage = 'Percentage',
+  FixedAmount = 'FixedAmount',
 }
 
 export interface HourlySalesDto {
@@ -5658,7 +5801,9 @@ export interface LoginDto {
 export interface MenuImportResult {
   categoriesCreated?: number;
   productsCreated?: number;
+  productsUpdated?: number;
   modifiersCreated?: number;
+  modifiersUpdated?: number;
   productModifierLinksCreated?: number;
   errors?: string[] | null;
 }
@@ -5709,13 +5854,6 @@ export interface OrderDto {
   payments?: PaymentSummaryDto[] | null;
 }
 
-export interface OrderDtoPagination {
-  pageIndex?: number;
-  pageSize?: number;
-  count?: number;
-  data?: OrderDto[] | null;
-}
-
 export interface OrderLineItemDto {
   id?: number;
   productId?: number;
@@ -5740,10 +5878,24 @@ export interface OrderModifierItemDto {
 }
 
 export enum OrderStatus {
-  _0 = 0,
-  _1 = 1,
-  _2 = 2,
-  _3 = 3,
+  Open = 'Open',
+  Completed = 'Completed',
+  Voided = 'Voided',
+  Refunded = 'Refunded',
+}
+
+export interface PaginationOfOrderDto {
+  pageIndex?: number;
+  pageSize?: number;
+  count?: number;
+  data?: OrderDto[] | null;
+}
+
+export interface PaginationOfProductDto {
+  pageIndex?: number;
+  pageSize?: number;
+  count?: number;
+  data?: ProductDto[] | null;
 }
 
 export interface PaymentDto {
@@ -5759,15 +5911,15 @@ export interface PaymentDto {
 }
 
 export enum PaymentMethod {
-  _0 = 0,
-  _1 = 1,
-  _2 = 2,
+  Cash = 'Cash',
+  Card = 'Card',
+  Other = 'Other',
 }
 
 export enum PaymentStatus {
-  _0 = 0,
-  _1 = 1,
-  _2 = 2,
+  Pending = 'Pending',
+  Completed = 'Completed',
+  Refunded = 'Refunded',
 }
 
 export interface PaymentSummaryDto {
@@ -5811,13 +5963,6 @@ export interface ProductDto {
   sku?: string | null;
   variants?: ProductVariantDto[] | null;
   modifiers?: ProductModifierDto[] | null;
-}
-
-export interface ProductDtoPagination {
-  pageIndex?: number;
-  pageSize?: number;
-  count?: number;
-  data?: ProductDto[] | null;
 }
 
 export interface ProductModifierDto {
@@ -5918,8 +6063,8 @@ export interface ShiftReportDto {
 }
 
 export enum ShiftStatus {
-  _0 = 0,
-  _1 = 1,
+  Open = 'Open',
+  Closed = 'Closed',
 }
 
 export interface StaffDto {
