@@ -51,7 +51,7 @@ describe('AuthService', () => {
       const user = makeUser();
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(user));
 
-      const result = await service.pinLogin('1234');
+      const result = await service.pinLogin('user-1', '1234');
 
       expect(result).toEqual(user);
       expect(service.currentUser()).toEqual(user);
@@ -62,17 +62,17 @@ describe('AuthService', () => {
       const user = makeUser({ token: 'my-jwt' });
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(user));
 
-      await service.pinLogin('1234');
+      await service.pinLogin('user-1', '1234');
 
       expect(localStorage.getItem('brewbar_token')).toBe('my-jwt');
     });
 
-    it('should call API with correct pin', async () => {
+    it('should call API with correct userId and pin', async () => {
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(makeUser()));
 
-      await service.pinLogin('9999');
+      await service.pinLogin('user-42', '9999');
 
-      expect(client.auth_PinLogin).toHaveBeenCalledWith({ pin: '9999' });
+      expect(client.auth_PinLogin).toHaveBeenCalledWith({ userId: 'user-42', pin: '9999' });
     });
   });
 
@@ -118,7 +118,7 @@ describe('AuthService', () => {
       const user = makeUser({ authMethod: 'pin' });
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(user));
 
-      await service.pinLogin('1234');
+      await service.pinLogin('user-1', '1234');
 
       expect(service.authMethod()).toBe('pin');
       expect(service.isPasswordAuthenticated()).toBe(false);
@@ -140,7 +140,7 @@ describe('AuthService', () => {
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
         of(makeUser({ authMethod: 'pin' })),
       );
-      await service.pinLogin('1234');
+      await service.pinLogin('user-1', '1234');
 
       service.logout();
 
@@ -149,11 +149,63 @@ describe('AuthService', () => {
     });
   });
 
+  describe('canAccessAdminPanel', () => {
+    it('should be false when no user is signed in', () => {
+      expect(service.canAccessAdminPanel()).toBe(false);
+    });
+
+    it('should be false for a Cashier-only user', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ roles: ['Cashier'] })),
+      );
+      await service.pinLogin('user-1', '1234');
+
+      expect(service.canAccessAdminPanel()).toBe(false);
+    });
+
+    it('should be true for an Admin user', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ roles: ['Admin'] })),
+      );
+      await service.pinLogin('user-1', '1234');
+
+      expect(service.canAccessAdminPanel()).toBe(true);
+    });
+
+    it('should be true for a Manager user', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ roles: ['Manager'] })),
+      );
+      await service.pinLogin('user-1', '1234');
+
+      expect(service.canAccessAdminPanel()).toBe(true);
+    });
+
+    it('should be true for a user with multiple roles including Admin', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ roles: ['Cashier', 'Admin'] })),
+      );
+      await service.pinLogin('user-1', '1234');
+
+      expect(service.canAccessAdminPanel()).toBe(true);
+    });
+
+    it('should be false again after logout', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ roles: ['Admin'] })),
+      );
+      await service.pinLogin('user-1', '1234');
+      service.logout();
+
+      expect(service.canAccessAdminPanel()).toBe(false);
+    });
+  });
+
   describe('logout', () => {
     it('should clear user and token', async () => {
       // First log in
       (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(makeUser()));
-      await service.pinLogin('1234');
+      await service.pinLogin('user-1', '1234');
 
       service.logout();
 

@@ -31,7 +31,7 @@ namespace BrewBar.Infrastructure.Identity.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     DisplayName = table.Column<string>(type: "TEXT", nullable: false),
-                    Pin = table.Column<string>(type: "TEXT", nullable: true),
+                    PinHash = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),

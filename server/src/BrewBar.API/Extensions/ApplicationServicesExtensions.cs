@@ -23,6 +23,24 @@ public static class ApplicationServicesExtensions
                 opt.QueueLimit = 10;
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
             });
+
+            // Per-IP limiter for auth endpoints — brute-force protection that complements
+            // Identity's per-user AccessFailedCount lockout. Applied via [EnableRateLimiting("auth")]
+            // on /login, /pin-login, and /setup. The limit is config-driven so the integration
+            // test fixture can raise it (a single fixed test IP would otherwise trip on the
+            // 10/minute production cap and break unrelated tests with 429s).
+            var authPermitLimit = config.GetValue<int?>("RateLimit:AuthPermitLimit") ?? 10;
+            options.AddPolicy("auth", context =>
+            {
+                var key = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = authPermitLimit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                });
+            });
         });
 
         var provider = config["DatabaseProvider"] ?? "MySql";

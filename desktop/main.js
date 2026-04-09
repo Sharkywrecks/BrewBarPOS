@@ -6,6 +6,11 @@ const https = require('https');
 const fs = require('fs');
 const treeKill = require('tree-kill');
 
+// Note: this shell intentionally knows nothing about credentials. First-launch
+// admin + business settings bootstrap is handled by the API itself, which reads
+// bootstrap.json (written by the MSI installer) on startup, processes it under
+// a zero-users precondition, and deletes the file. See BootstrapService.cs.
+
 let mainWindow;
 let apiProcess;
 
@@ -164,92 +169,6 @@ function showApp() {
   }
 }
 
-// ─── First-launch helpers (standalone only) ────────────────────
-
-function httpRequest(url, options, body) {
-  return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? https : http;
-    const req = mod.request(url, options, (res) => {
-      let data = '';
-      res.on('data', (d) => (data += d));
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
-    });
-    req.on('error', reject);
-    if (body) req.end(body);
-    else req.end();
-  });
-}
-
-async function getAdminToken() {
-  const loginData = JSON.stringify({ pin: '1234' });
-  const res = await httpRequest(`${API_URL}/api/auth/pin-login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  }, loginData);
-  try {
-    return JSON.parse(res.body).token;
-  } catch {
-    return null;
-  }
-}
-
-async function tryApplySettings() {
-  const apiDir = path.dirname(getApiExePath());
-  const settingsFile = path.join(apiDir, 'install-settings.json');
-
-  if (!fs.existsSync(settingsFile)) return;
-  console.log(`[Settings] Found ${settingsFile}, applying...`);
-
-  let settings;
-  try {
-    settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
-  } catch {
-    console.error('[Settings] Failed to parse settings file');
-    return;
-  }
-
-  const token = await getAdminToken();
-  if (!token) { console.error('[Settings] Failed to get auth token'); return; }
-
-  const payload = JSON.stringify({
-    storeName: settings.storeName || 'BrewBar',
-    storeInfo: settings.storeInfo || null,
-    taxRate: settings.taxRatePercent ? parseFloat(settings.taxRatePercent) / 100 : 0.15,
-    currency: settings.currency || 'SCR',
-  });
-
-  const res = await httpRequest(`${API_URL}/api/settings`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      'Content-Length': Buffer.byteLength(payload),
-    },
-  }, payload);
-
-  console.log(`[Settings] Response (${res.status}): ${res.body}`);
-
-  // Setup admin account if custom credentials were provided
-  if (settings.adminEmail && settings.adminEmail !== 'admin@brewbar.local') {
-    const adminPayload = JSON.stringify({
-      displayName: settings.adminName || 'Admin',
-      email: settings.adminEmail,
-      password: settings.adminPassword || 'Admin123!',
-      pin: settings.adminPin || '1234',
-    });
-    const adminRes = await httpRequest(`${API_URL}/api/auth/setup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(adminPayload),
-      },
-    }, adminPayload);
-    console.log(`[Admin Setup] Response (${adminRes.status}): ${adminRes.body}`);
-  }
-
-  fs.unlinkSync(settingsFile);
-}
-
 // ─── App lifecycle ─────────────────────────────────────────────
 
 app.on('ready', async () => {
@@ -259,7 +178,6 @@ app.on('ready', async () => {
     startApi();
     try {
       await waitForApi();
-      await tryApplySettings();
     } catch (err) {
       console.error('Failed to start local API:', err);
       app.quit();

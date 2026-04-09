@@ -4,10 +4,19 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <!-- Version passed from build script; default for local dev -->
     <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0.0</ProductVersion>
-    <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
+    <DefineConstants>ProductVersion=$(ProductVersion);CustomActionsDll=$(MSBuildThisFileDirectory)BrewBar.CustomActions\bin\$(Configuration)\net472\BrewBar.CustomActions.CA.dll</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
     <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Build the C# custom-action DLL before linking the MSI so the Binary
+         element below can find BrewBar.CustomActions.CA.dll. -->
+    <ProjectReference Include="BrewBar.CustomActions\BrewBar.CustomActions.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>

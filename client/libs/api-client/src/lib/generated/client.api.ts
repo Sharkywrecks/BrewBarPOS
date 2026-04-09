@@ -5157,6 +5157,7 @@ export interface LoginDto {
 }
 
 export interface PinLoginDto {
+  userId: string;
   pin: string;
 }
 

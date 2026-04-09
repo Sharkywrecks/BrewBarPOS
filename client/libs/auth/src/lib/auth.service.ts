@@ -11,6 +11,16 @@ export class AuthService {
   readonly isAuthenticated = computed(() => !!this.currentUser());
   readonly authMethod = computed(() => this.currentUser()?.authMethod ?? null);
   readonly isPasswordAuthenticated = computed(() => this.authMethod() === 'password');
+  /**
+   * True when the current user has a role that's allowed to use the admin panel.
+   * Note: this only gates *visibility* of the entry point. The admin app's own
+   * `adminAuthGuard` still requires a password-issued token, so a pin-authenticated
+   * admin will be sent to the admin login page when they click through.
+   */
+  readonly canAccessAdminPanel = computed(() => {
+    const roles = this.currentUser()?.roles ?? [];
+    return roles.includes('Admin') || roles.includes('Manager');
+  });
 
   constructor(
     @Inject(CLIENT_TOKEN) private readonly client: IClient,
@@ -21,8 +31,8 @@ export class AuthService {
     return firstValueFrom(this.client.auth_GetStaff());
   }
 
-  async pinLogin(pin: string): Promise<UserDto> {
-    const dto: PinLoginDto = { pin };
+  async pinLogin(userId: string, pin: string): Promise<UserDto> {
+    const dto: PinLoginDto = { userId, pin };
     const user = await firstValueFrom(this.client.auth_PinLogin(dto));
     this.storeToken(user.token!);
     this.currentUser.set(user);

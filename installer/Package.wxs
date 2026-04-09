@@ -124,9 +124,11 @@
           </ComboBox>
         </Control>
 
-        <!-- Admin Account -->
+        <!-- Admin Account — REQUIRED. Wizard "Next" is conditioned on all four
+             fields being non-empty so the install can never produce an account
+             with a blank password / PIN. There is no fallback to a default. -->
         <Control Id="AdminSectionLabel" Type="Text" X="25" Y="122" Width="320" Height="12"
-                 NoPrefix="yes" Text="{\WixUI_Font_Bold}Admin Account" />
+                 NoPrefix="yes" Text="{\WixUI_Font_Bold}Admin Account (required)" />
         <Control Id="AdminNameLabel" Type="Text" X="25" Y="138" Width="60" Height="12"
                  NoPrefix="yes" Text="Name:" />
         <Control Id="AdminNameEdit" Type="Edit" X="90" Y="136" Width="100" Height="18"
@@ -138,11 +140,14 @@
         <Control Id="AdminPasswordLabel" Type="Text" X="25" Y="160" Width="60" Height="12"
                  NoPrefix="yes" Text="Password:" />
         <Control Id="AdminPasswordEdit" Type="Edit" X="90" Y="158" Width="100" Height="18"
-                 Property="ADMIN_PASSWORD" />
+                 Property="ADMIN_PASSWORD" Password="yes" />
         <Control Id="AdminPinLabel" Type="Text" X="195" Y="160" Width="40" Height="12"
                  NoPrefix="yes" Text="PIN:" />
         <Control Id="AdminPinEdit" Type="Edit" X="240" Y="158" Width="60" Height="18"
-                 Property="ADMIN_PIN" />
+                 Property="ADMIN_PIN" Password="yes" />
+        <Control Id="ValidationHint" Type="Text" X="25" Y="183" Width="320" Height="12"
+                 NoPrefix="yes"
+                 Text="All admin fields are required. Password &gt;= 6 chars, PIN 4-6 digits." />
 
         <Control Id="BottomLine" Type="Line" X="0" Y="204" Width="370" Height="0" />
 
@@ -150,10 +155,30 @@
           <Publish Event="NewDialog" Value="DeployModeDlg" />
         </Control>
         <Control Id="Next" Type="PushButton" X="236" Y="213" Width="56" Height="17" Default="yes" Text="Next">
-          <Publish Event="NewDialog" Value="DeleteDataDlg" />
+          <!-- Block advance unless all four admin fields are non-empty AND password
+               is at least 6 chars AND pin is 4-6 chars. SpawnDialog the error
+               otherwise. -->
+          <Publish Event="SpawnDialog" Value="AdminFieldsRequiredDlg"
+                   Condition="ADMIN_NAME=&quot;&quot; OR ADMIN_EMAIL=&quot;&quot; OR ADMIN_PASSWORD=&quot;&quot; OR ADMIN_PIN=&quot;&quot;"
+                   Order="1" />
+          <Publish Event="NewDialog" Value="DeleteDataDlg"
+                   Condition="ADMIN_NAME&lt;&gt;&quot;&quot; AND ADMIN_EMAIL&lt;&gt;&quot;&quot; AND ADMIN_PASSWORD&lt;&gt;&quot;&quot; AND ADMIN_PIN&lt;&gt;&quot;&quot;"
+                   Order="2" />
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="213" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+
+      <!-- Validation error dialog for empty admin fields. -->
+      <Dialog Id="AdminFieldsRequiredDlg" Width="260" Height="100" Title="BrewBar POS"
+              NoMinimize="yes">
+        <Control Id="Message" Type="Text" X="20" Y="20" Width="220" Height="40"
+                 NoPrefix="yes"
+                 Text="All admin account fields are required: name, email, password, and PIN. Please go back and fill them in." />
+        <Control Id="OK" Type="PushButton" X="100" Y="70" Width="60" Height="17"
+                 Default="yes" Cancel="yes" Text="OK">
+          <Publish Event="EndDialog" Value="Return" />
         </Control>
       </Dialog>
 
@@ -229,32 +254,70 @@
       <Files Include="..\build\electron\win-unpacked\**" />
     </ComponentGroup>
 
-    <!-- Business settings — set during install, written to JSON config for first-launch import -->
+    <!-- Business settings — collected by the wizard, written to bootstrap.json
+         for the API to consume on first startup. NO defaults for credentials:
+         the user MUST type them or the install proceeds without an admin and the
+         API will fall through to the unauthenticated /api/auth/setup endpoint. -->
     <Property Id="STORE_NAME" Value="BrewBar" Secure="yes" />
     <Property Id="TAX_RATE_PCT" Value="15" Secure="yes" />
     <Property Id="CURRENCY_CODE" Value="SCR" Secure="yes" />
 
-    <!-- Admin account setup -->
-    <Property Id="ADMIN_NAME" Value="Admin" Secure="yes" />
-    <Property Id="ADMIN_EMAIL" Value="admin@brewbar.local" Secure="yes" />
-    <Property Id="ADMIN_PASSWORD" Value="Admin123!" Secure="yes" />
-    <Property Id="ADMIN_PIN" Value="1234" Secure="yes" />
+    <!-- Admin account: declared without a value so the wizard's "Next" check
+         (ADMIN_X="") evaluates true until the user types something in. There is
+         no fall-back to a known credential anywhere in the install pipeline. -->
+    <Property Id="ADMIN_NAME" Secure="yes" />
+    <Property Id="ADMIN_EMAIL" Secure="yes" />
+    <Property Id="ADMIN_PASSWORD" Secure="yes" />
+    <Property Id="ADMIN_PIN" Secure="yes" />
 
-    <!-- Write deployment config for Electron to read on startup -->
+    <!--
+      Managed C# custom actions live in BrewBar.CustomActions.CA.dll. This is the
+      replacement for the cmd.exe / PowerShell heredocs that previously interpolated
+      MSI properties straight into a shell command line — those couldn't safely
+      handle passwords containing quotes, &amp;, $, %, etc. CustomActionData is a raw
+      string passed in-process to the action with no shell of any kind.
+    -->
+    <Binary Id="BrewBarCustomActionsBinary" SourceFile="$(var.CustomActionsDll)" />
+
+    <!-- Bootstrap.json: admin credentials + business settings for first-launch.
+         The API consumes it under a zero-users precondition (BootstrapService)
+         and deletes it. Skipped silently by the CA if any credential is blank. -->
+    <CustomAction Id="WriteBootstrapJsonSetData"
+                  Property="WriteBootstrapJson"
+                  Value="INSTALLFOLDER=[INSTALLFOLDER];ADMIN_NAME=[ADMIN_NAME];ADMIN_EMAIL=[ADMIN_EMAIL];ADMIN_PASSWORD=[ADMIN_PASSWORD];ADMIN_PIN=[ADMIN_PIN];STORE_NAME=[STORE_NAME];TAX_RATE_PCT=[TAX_RATE_PCT];CURRENCY_CODE=[CURRENCY_CODE]" />
+    <CustomAction Id="WriteBootstrapJson"
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="WriteBootstrapJson"
+                  Execute="deferred"
+                  Impersonate="no"
+                  Return="ignore" />
+
+    <!-- Deployment.json: Electron mode + API URL. -->
+    <CustomAction Id="WriteDeploymentJsonSetData"
+                  Property="WriteDeploymentJson"
+                  Value="INSTALLFOLDER=[INSTALLFOLDER];DEPLOY_MODE=[DEPLOY_MODE];API_URL=[API_URL]" />
     <CustomAction Id="WriteDeploymentJson"
-                  Directory="INSTALLFOLDER"
-                  ExeCommand='cmd.exe /c echo {"mode":"[DEPLOY_MODE]","apiUrl":"[API_URL]","apiPort":5000} > "[INSTALLFOLDER]deployment.json"'
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="WriteDeploymentJson"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
 
-    <!-- Write business settings JSON for first-launch import (standalone only) -->
-    <CustomAction Id="WriteSettingsJson"
-                  Directory="INSTALLFOLDER"
-                  ExeCommand='cmd.exe /c echo {"storeName":"[STORE_NAME]","taxRatePercent":[TAX_RATE_PCT],"currency":"[CURRENCY_CODE]","adminName":"[ADMIN_NAME]","adminEmail":"[ADMIN_EMAIL]","adminPassword":"[ADMIN_PASSWORD]","adminPin":"[ADMIN_PIN]"} > "[INSTALLFOLDER]resources\api\install-settings.json"'
+    <!--
+      Per-install JWT signing key. The published API fail-fasts if Jwt:Secret is
+      missing or set to a known placeholder (see IdentityServicesExtensions.
+      ValidateJwtSecret), so each install must have its own random key. Idempotent
+      via the CA — preserves existing key on MajorUpgrade.
+    -->
+    <CustomAction Id="WriteJwtSecretSetData"
+                  Property="WriteJwtSecret"
+                  Value="INSTALLFOLDER=[INSTALLFOLDER]" />
+    <CustomAction Id="WriteJwtSecret"
+                  BinaryRef="BrewBarCustomActionsBinary"
+                  DllEntry="WriteJwtSecret"
                   Execute="deferred"
                   Impersonate="no"
-                  Return="ignore" />
+                  Return="check" />
     <!--
       Optional: delete user data (database) on uninstall.
       Default is OFF — user must explicitly opt in via:
@@ -271,8 +334,19 @@
                   Return="ignore" />
 
     <InstallExecuteSequence>
+      <!-- SetProperty CAs are immediate; they propagate MSI properties into the
+           CustomActionData of the matching deferred CAs. They must run before the
+           deferred CAs but inside the InstallExecute phase. -->
+      <Custom Action="WriteDeploymentJsonSetData" Before="WriteDeploymentJson" />
       <Custom Action="WriteDeploymentJson" After="InstallFiles" />
-      <Custom Action="WriteSettingsJson" After="WriteDeploymentJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
+
+      <Custom Action="WriteBootstrapJsonSetData" Before="WriteBootstrapJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
+      <Custom Action="WriteBootstrapJson" After="WriteDeploymentJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
+
+      <!-- Always generate a JWT key — the API exe ships in both modes and may be started later -->
+      <Custom Action="WriteJwtSecretSetData" Before="WriteJwtSecret" />
+      <Custom Action="WriteJwtSecret" After="WriteBootstrapJson" />
+
       <Custom Action="DeleteUserData" After="RemoveFiles" Condition="DELETE_DATA=&quot;1&quot;" />
     </InstallExecuteSequence>
 

@@ -20,12 +20,17 @@ npx ng serve pos      # POS app → http://localhost:4201
 npx ng serve admin    # Admin app → http://localhost:4200
 ```
 
-### Default Login Credentials
+### First-Run Setup
 
-| Role | PIN | Email | Password |
-|------|-----|-------|----------|
-| Admin | 1234 | admin@brewbar.local | Admin123! |
-| Cashier | 0000 | cashier@brewbar.local | Cashier123! |
+There are no seeded credentials. On a fresh DB the API exposes `POST /api/auth/setup` which creates the first admin (and is rejected with 409 once any user exists). For local development, hit it once after starting the API:
+
+```bash
+curl -X POST http://localhost:5117/api/auth/setup \
+  -H "Content-Type: application/json" \
+  -d '{"displayName":"Dev","email":"dev@local","password":"DevPass123!","pin":"1234"}'
+```
+
+You can then create additional staff via `POST /api/auth/register` (admin token required).
 
 ## Project Structure
 

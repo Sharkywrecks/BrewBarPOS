@@ -1,5 +1,3 @@
-using BrewBar.Core.Constants;
-using BrewBar.Core.Entities.Identity;
 using BrewBar.Core.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,13 +7,18 @@ namespace BrewBar.Infrastructure.Data.Seed;
 
 public static class SeedData
 {
+    /// <summary>
+    /// Seeds data that is safe in every environment: Identity roles only.
+    /// Fresh installs start with zero users — the first admin must be created
+    /// via POST /api/auth/setup (one-shot, rejected once any user exists).
+    /// </summary>
     public static async Task SeedAsync(IServiceProvider services)
     {
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("SeedData");
 
         try
         {
-            await SeedRolesAndAdmin(services, logger);
+            await SeedRoles(services, logger);
         }
         catch (Exception ex)
         {
@@ -24,12 +27,10 @@ public static class SeedData
         }
     }
 
-    private static async Task SeedRolesAndAdmin(IServiceProvider services, ILogger logger)
+    private static async Task SeedRoles(IServiceProvider services, ILogger logger)
     {
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        var userManager = services.GetRequiredService<UserManager<AppUser>>();
 
-        // Seed roles
         foreach (var role in Enum.GetNames<UserRole>())
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -38,50 +39,5 @@ public static class SeedData
                 logger.LogInformation("Created role: {Role}", role);
             }
         }
-
-        // Seed default admin
-        const string adminEmail = "admin@brewbar.local";
-        if (await userManager.FindByEmailAsync(adminEmail) == null)
-        {
-            var admin = new AppUser
-            {
-                DisplayName = "Admin",
-                Email = adminEmail,
-                UserName = adminEmail,
-                Pin = "1234"
-            };
-
-            var result = await userManager.CreateAsync(admin, "Admin123!");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(admin, Roles.Admin);
-                logger.LogInformation("Created default admin user: {Email}", adminEmail);
-            }
-            else
-            {
-                logger.LogWarning("Failed to create admin: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-        }
-
-        // Seed demo cashier
-        const string cashierEmail = "cashier@brewbar.local";
-        if (await userManager.FindByEmailAsync(cashierEmail) == null)
-        {
-            var cashier = new AppUser
-            {
-                DisplayName = "Demo Cashier",
-                Email = cashierEmail,
-                UserName = cashierEmail,
-                Pin = "0000"
-            };
-
-            var result = await userManager.CreateAsync(cashier, "Cashier123!");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(cashier, Roles.Cashier);
-                logger.LogInformation("Created demo cashier: {Email}", cashierEmail);
-            }
-        }
     }
-
 }

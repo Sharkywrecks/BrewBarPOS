@@ -7,6 +7,7 @@ using BrewBar.Core.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace BrewBar.API.Controllers;
@@ -15,36 +16,73 @@ public class AuthController : BaseApiController
 {
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
+    private readonly IPasswordHasher<AppUser> _passwordHasher;
     private readonly ITokenService _tokenService;
+    private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
-        ITokenService tokenService)
+        IPasswordHasher<AppUser> passwordHasher,
+        ITokenService tokenService,
+        ILogger<AuthController> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _passwordHasher = passwordHasher;
         _tokenService = tokenService;
+        _logger = logger;
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<UserDto>> Login(LoginDto dto, CancellationToken ct)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null) return Unauthorized(new ApiResponse(401, "Invalid email or password"));
 
-        var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
-        if (!result.Succeeded) return Unauthorized(new ApiResponse(401, "Invalid email or password"));
+        if (await _userManager.IsLockedOutAsync(user))
+            return Unauthorized(new ApiResponse(401, "Account is locked. Try again later."));
+
+        var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning("Failed login for {Email} from {Ip}", dto.Email, HttpContext.Connection.RemoteIpAddress);
+            return Unauthorized(new ApiResponse(401, "Invalid email or password"));
+        }
 
         return await CreateUserDto(user, AuthClaims.AuthMethodPassword, ct);
     }
 
     [HttpPost("pin-login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<UserDto>> PinLogin(PinLoginDto dto, CancellationToken ct)
     {
-        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Pin == dto.Pin, ct);
-        if (user == null) return Unauthorized(new ApiResponse(401, "Invalid PIN"));
+        // Scope lookup to a single user selected via GET /api/auth/staff. This removes
+        // both the whole-table scan (was FirstOrDefault(u => u.Pin == dto.Pin)) and the
+        // associated timing side channel, and makes per-user lockout meaningful.
+        var user = await _userManager.FindByIdAsync(dto.UserId);
+        if (user == null || string.IsNullOrEmpty(user.PinHash))
+            return Unauthorized(new ApiResponse(401, "Invalid credentials"));
 
+        if (await _userManager.IsLockedOutAsync(user))
+            return Unauthorized(new ApiResponse(401, "Account is locked. Try again later."));
+
+        var verify = _passwordHasher.VerifyHashedPassword(user, user.PinHash, dto.Pin);
+        if (verify == PasswordVerificationResult.Failed)
+        {
+            await _userManager.AccessFailedAsync(user);
+            _logger.LogWarning("Failed PIN login for {UserId} from {Ip}", user.Id, HttpContext.Connection.RemoteIpAddress);
+            return Unauthorized(new ApiResponse(401, "Invalid credentials"));
+        }
+
+        if (verify == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.PinHash = _passwordHasher.HashPassword(user, dto.Pin);
+            await _userManager.UpdateAsync(user);
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
         return await CreateUserDto(user, AuthClaims.AuthMethodPin, ct);
     }
 
@@ -59,9 +97,11 @@ public class AuthController : BaseApiController
         {
             DisplayName = dto.DisplayName,
             Email = dto.Email,
-            UserName = dto.Email,
-            Pin = dto.Pin
+            UserName = dto.Email
         };
+
+        if (!string.IsNullOrEmpty(dto.Pin))
+            user.PinHash = _passwordHasher.HashPassword(user, dto.Pin);
 
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded) return BadRequest(new ApiResponse(400, string.Join(", ", result.Errors.Select(e => e.Description))));
@@ -74,35 +114,44 @@ public class AuthController : BaseApiController
     }
 
     /// <summary>
-    /// One-time initial setup: updates the default admin account with custom credentials.
-    /// Only works when the default admin (admin@brewbar.local) still exists.
+    /// One-shot bootstrap: creates the first admin account. Rejected with 409 as soon
+    /// as any user exists, so this cannot be used to hijack an already-configured install.
     /// </summary>
     [HttpPost("setup")]
     [AllowAnonymous]
-    public async Task<ActionResult> InitialSetup(InitialSetupDto dto, CancellationToken ct)
+    [EnableRateLimiting("auth")]
+    public async Task<ActionResult<UserDto>> InitialSetup(InitialSetupDto dto, CancellationToken ct)
     {
-        const string defaultEmail = "admin@brewbar.local";
-        var admin = await _userManager.FindByEmailAsync(defaultEmail);
-        if (admin == null)
-            return BadRequest(new ApiResponse(400, "Initial setup already completed"));
+        if (await _userManager.Users.AnyAsync(ct))
+        {
+            _logger.LogWarning("Rejected /setup call from {Ip} — setup already completed",
+                HttpContext.Connection.RemoteIpAddress);
+            return Conflict(new ApiResponse(409, "Setup has already been completed"));
+        }
 
-        // Update credentials
-        admin.DisplayName = dto.DisplayName;
-        admin.Email = dto.Email;
-        admin.UserName = dto.Email;
-        admin.Pin = dto.Pin;
+        var admin = new AppUser
+        {
+            DisplayName = dto.DisplayName,
+            Email = dto.Email,
+            UserName = dto.Email
+        };
+        admin.PinHash = _passwordHasher.HashPassword(admin, dto.Pin);
 
-        var updateResult = await _userManager.UpdateAsync(admin);
-        if (!updateResult.Succeeded)
-            return BadRequest(new ApiResponse(400, string.Join(", ", updateResult.Errors.Select(e => e.Description))));
+        var createResult = await _userManager.CreateAsync(admin, dto.Password);
+        if (!createResult.Succeeded)
+            return BadRequest(new ApiResponse(400, string.Join(", ", createResult.Errors.Select(e => e.Description))));
 
-        // Change password
-        var token = await _userManager.GeneratePasswordResetTokenAsync(admin);
-        var pwResult = await _userManager.ResetPasswordAsync(admin, token, dto.Password);
-        if (!pwResult.Succeeded)
-            return BadRequest(new ApiResponse(400, string.Join(", ", pwResult.Errors.Select(e => e.Description))));
+        var roleResult = await _userManager.AddToRoleAsync(admin, Roles.Admin);
+        if (!roleResult.Succeeded)
+        {
+            // Roll back so the endpoint stays idempotent — otherwise a failed role assignment
+            // would leave a user in the DB and permanently block future /setup calls.
+            await _userManager.DeleteAsync(admin);
+            return BadRequest(new ApiResponse(400, string.Join(", ", roleResult.Errors.Select(e => e.Description))));
+        }
 
-        return Ok(new ApiResponse(200, "Admin account configured"));
+        _logger.LogInformation("Initial admin created via /setup: {Email}", dto.Email);
+        return await CreateUserDto(admin, AuthClaims.AuthMethodPassword, ct);
     }
 
     [HttpGet("current")]

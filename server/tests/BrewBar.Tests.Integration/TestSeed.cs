@@ -1,5 +1,8 @@
+using BrewBar.Core.Constants;
 using BrewBar.Core.Entities.CatalogAggregate;
+using BrewBar.Core.Entities.Identity;
 using BrewBar.Infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +15,63 @@ namespace BrewBar.Tests.Integration;
 /// </summary>
 internal static class TestSeed
 {
+    public const string AdminEmail = "admin@brewbar.local";
+    public const string AdminPassword = "Admin123!";
+    public const string AdminPin = "1234";
+    public const string CashierEmail = "cashier@brewbar.local";
+    public const string CashierPassword = "Cashier123!";
+    public const string CashierPin = "0000";
+
+    /// <summary>
+    /// Seeds the deterministic admin and cashier accounts the integration suite assumes
+    /// (the production seed only seeds Identity roles — fresh installs require /api/auth/setup).
+    /// Returns the seeded user IDs so PIN-login helpers can scope by id.
+    /// </summary>
+    public static async Task<(string AdminId, string CashierId)> SeedTestUsersAsync(IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<AppUser>>();
+
+        var admin = await EnsureUser(userManager, hasher, AdminEmail, "Admin", AdminPassword, AdminPin, Roles.Admin);
+        var cashier = await EnsureUser(userManager, hasher, CashierEmail, "Demo Cashier", CashierPassword, CashierPin, Roles.Cashier);
+
+        return (admin.Id, cashier.Id);
+    }
+
+    private static async Task<AppUser> EnsureUser(
+        UserManager<AppUser> userManager,
+        IPasswordHasher<AppUser> hasher,
+        string email,
+        string displayName,
+        string password,
+        string pin,
+        string role)
+    {
+        var existing = await userManager.FindByEmailAsync(email);
+        if (existing != null) return existing;
+
+        var user = new AppUser
+        {
+            Email = email,
+            UserName = email,
+            DisplayName = displayName,
+        };
+        user.PinHash = hasher.HashPassword(user, pin);
+
+        var createResult = await userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+            throw new InvalidOperationException(
+                $"Failed to seed test user {email}: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+
+        var roleResult = await userManager.AddToRoleAsync(user, role);
+        if (!roleResult.Succeeded)
+            throw new InvalidOperationException(
+                $"Failed to assign role {role} to {email}: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+
+        return user;
+    }
+
     public static async Task SeedCatalogAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();

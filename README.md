@@ -50,13 +50,9 @@ Most POS systems are cloud-locked SaaS products with per-terminal fees. BrewBar 
 
 ### Desktop Install (Recommended)
 
-Download the latest `.msi` installer from [Releases](https://github.com/Sharkywrecks/BrewBarPOS/releases), run it, and launch **BrewBar POS** from the Start Menu or Desktop shortcut. That's it — the app bundles everything it needs.
+Download the latest `.msi` installer from [Releases](https://github.com/Sharkywrecks/BrewBarPOS/releases), run it, and launch **BrewBar POS** from the Start Menu or Desktop shortcut. The installer wizard collects your store details and the **first admin account** (name, email, password, PIN) — there are no default credentials.
 
-**Default login:**
-| Role | Email | Password | PIN |
-|------|-------|----------|-----|
-| Admin | admin@brewbar.local | Admin123! | 1234 |
-| Cashier | cashier@brewbar.local | Cashier123! | 0000 |
+If you skip the credential step (advanced/unattended install), the app will start with an empty user table and you can create the first admin via `POST /api/auth/setup`.
 
 ### Development Setup
 

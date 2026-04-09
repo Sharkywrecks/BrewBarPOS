@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BrewBar.Infrastructure.Identity.Migrations
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    [Migration("20260408070505_IdentityInitial")]
+    [Migration("20260409075408_IdentityInitial")]
     partial class IdentityInitial
     {
         /// <inheritdoc />
@@ -69,7 +69,7 @@ namespace BrewBar.Infrastructure.Identity.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Pin")
+                    b.Property<string>("PinHash")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")

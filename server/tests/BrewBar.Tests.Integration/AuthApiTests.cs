@@ -17,8 +17,8 @@ public class AuthApiTests : IClassFixture<TestFixture>
     {
         var response = await _f.Client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "admin@brewbar.local",
-            password = "Admin123!"
+            email = TestSeed.AdminEmail,
+            password = TestSeed.AdminPassword
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -33,7 +33,7 @@ public class AuthApiTests : IClassFixture<TestFixture>
     {
         var response = await _f.Client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "admin@brewbar.local",
+            email = TestSeed.AdminEmail,
             password = "wrong"
         });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -55,7 +55,11 @@ public class AuthApiTests : IClassFixture<TestFixture>
     [Fact]
     public async Task PinLogin_ValidPin_ReturnsToken()
     {
-        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { pin = "1234" });
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = _f.AdminUserId,
+            pin = "1234"
+        });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -65,7 +69,11 @@ public class AuthApiTests : IClassFixture<TestFixture>
     [Fact]
     public async Task PinLogin_CashierPin_ReturnsCorrectRole()
     {
-        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { pin = "0000" });
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = _f.CashierUserId,
+            pin = "0000"
+        });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -76,8 +84,85 @@ public class AuthApiTests : IClassFixture<TestFixture>
     [Fact]
     public async Task PinLogin_InvalidPin_Returns401()
     {
-        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { pin = "9999" });
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = _f.AdminUserId,
+            pin = "9999"
+        });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PinLogin_NonexistentUserId_Returns401()
+    {
+        // Even with the admin's real PIN, an unknown userId must not authenticate.
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = Guid.NewGuid().ToString(),
+            pin = "1234"
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PinLogin_AdminUserIdWithCashierPin_Returns401()
+    {
+        // Regression: previously the endpoint resolved by PIN alone, so selecting
+        // "Admin" in the picker but typing the cashier's PIN would log you in as the
+        // cashier. Now the userId scopes the lookup, so a mismatched PIN must fail.
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = _f.AdminUserId,
+            pin = "0000"
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PinLogin_SamePinDifferentUsers_ResolvesByUserId()
+    {
+        // Two users sharing the same PIN must each authenticate as themselves when
+        // logging in via their own userId. Guards against any future regression that
+        // re-introduces a "FirstOrDefault by PIN" lookup.
+        var adminClient = await _f.AsAdmin();
+        var sharedPin = "5151";
+
+        var emailA = $"share_a_{Guid.NewGuid():N}@brewbar.local";
+        var emailB = $"share_b_{Guid.NewGuid():N}@brewbar.local";
+
+        var createA = await adminClient.PostAsJsonAsync("/api/auth/register", new
+        {
+            displayName = "Share A",
+            email = emailA,
+            password = "Test123!",
+            pin = sharedPin,
+            role = "Cashier"
+        });
+        createA.EnsureSuccessStatusCode();
+        var aJson = await createA.Content.ReadFromJsonAsync<JsonElement>();
+        var idA = aJson.GetProperty("id").GetString()!;
+
+        var createB = await adminClient.PostAsJsonAsync("/api/auth/register", new
+        {
+            displayName = "Share B",
+            email = emailB,
+            password = "Test123!",
+            pin = sharedPin,
+            role = "Cashier"
+        });
+        createB.EnsureSuccessStatusCode();
+        var bJson = await createB.Content.ReadFromJsonAsync<JsonElement>();
+        var idB = bJson.GetProperty("id").GetString()!;
+
+        var loginA = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { userId = idA, pin = sharedPin });
+        Assert.Equal(HttpStatusCode.OK, loginA.StatusCode);
+        var aLoginJson = await loginA.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Share A", aLoginJson.GetProperty("displayName").GetString());
+
+        var loginB = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { userId = idB, pin = sharedPin });
+        Assert.Equal(HttpStatusCode.OK, loginB.StatusCode);
+        var bLoginJson = await loginB.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Share B", bLoginJson.GetProperty("displayName").GetString());
     }
 
     // --- Register ---
@@ -108,7 +193,7 @@ public class AuthApiTests : IClassFixture<TestFixture>
         var response = await client.PostAsJsonAsync("/api/auth/register", new
         {
             displayName = "Duplicate",
-            email = "admin@brewbar.local",
+            email = TestSeed.AdminEmail,
             password = "Test123!",
             role = "Cashier"
         });
@@ -139,7 +224,7 @@ public class AuthApiTests : IClassFixture<TestFixture>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("admin@brewbar.local", json.GetProperty("email").GetString());
+        Assert.Equal(TestSeed.AdminEmail, json.GetProperty("email").GetString());
     }
 
     [Fact]
@@ -177,8 +262,8 @@ public class AuthApiTests : IClassFixture<TestFixture>
     {
         var response = await _f.Client.PostAsJsonAsync("/api/auth/login", new
         {
-            email = "admin@brewbar.local",
-            password = "Admin123!"
+            email = TestSeed.AdminEmail,
+            password = TestSeed.AdminPassword
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -189,7 +274,11 @@ public class AuthApiTests : IClassFixture<TestFixture>
     [Fact]
     public async Task PinLogin_ReturnsPinAuthMethod()
     {
-        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new { pin = "0000" });
+        var response = await _f.Client.PostAsJsonAsync("/api/auth/pin-login", new
+        {
+            userId = _f.CashierUserId,
+            pin = "0000"
+        });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();

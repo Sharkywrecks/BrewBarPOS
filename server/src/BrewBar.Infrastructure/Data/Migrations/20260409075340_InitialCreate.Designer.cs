@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BrewBar.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(BrewBarContext))]
-    [Migration("20260408093516_InitialCreate")]
+    [Migration("20260409075340_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

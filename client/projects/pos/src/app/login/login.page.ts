@@ -185,11 +185,18 @@ export class LoginPage {
   }
 
   async onPinSubmit(pin: string): Promise<void> {
+    const user = this.selectedUser();
+    if (!user?.id) {
+      // Defensive: pin pad should never be shown without a selected user.
+      this.error.set('Please select your name first.');
+      return;
+    }
+
     this.loading.set(true);
     this.error.set(null);
 
     try {
-      await this.auth.pinLogin(pin);
+      await this.auth.pinLogin(user.id, pin);
       this.router.navigate(['/register']);
     } catch {
       this.error.set('Invalid PIN. Please try again.');

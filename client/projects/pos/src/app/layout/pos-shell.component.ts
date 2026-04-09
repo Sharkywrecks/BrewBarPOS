@@ -64,6 +64,16 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
           {{ printer.isConnected ? 'print' : 'print_disabled' }}
         </mat-icon>
       </button>
+      @if (auth.canAccessAdminPanel()) {
+        <a
+          mat-icon-button
+          href="/admin/"
+          matTooltip="Open admin panel"
+          aria-label="Open admin panel"
+        >
+          <mat-icon>admin_panel_settings</mat-icon>
+        </a>
+      }
       <span class="cashier-name">{{ auth.currentUser()?.displayName }}</span>
       <button mat-icon-button (click)="auth.logout()" aria-label="Logout">
         <mat-icon>logout</mat-icon>

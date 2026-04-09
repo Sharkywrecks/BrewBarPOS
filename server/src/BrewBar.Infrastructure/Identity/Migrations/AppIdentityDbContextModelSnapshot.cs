@@ -66,7 +66,7 @@ namespace BrewBar.Infrastructure.Identity.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Pin")
+                    b.Property<string>("PinHash")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SecurityStamp")

@@ -13,6 +13,8 @@ public class TestFixture : IAsyncLifetime
 {
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
     public HttpClient Client { get; private set; } = null!;
+    public string AdminUserId { get; private set; } = string.Empty;
+    public string CashierUserId { get; private set; } = string.Empty;
 
     private readonly string _dbName = $"brewbar_test_{Guid.NewGuid():N}.db";
 
@@ -25,6 +27,9 @@ public class TestFixture : IAsyncLifetime
             builder.UseSetting("Jwt:Secret", "test-jwt-secret-key-that-is-at-least-32-characters-long");
             builder.UseSetting("Jwt:Issuer", "TestIssuer");
             builder.UseSetting("Jwt:Audience", "TestAudience");
+            // Effectively disable auth rate limiting in tests — every request originates from
+            // the same in-memory test client so the production 10/minute cap would trip.
+            builder.UseSetting("RateLimit:AuthPermitLimit", "100000");
         });
 
         Client = Factory.CreateClient();
@@ -32,9 +37,13 @@ public class TestFixture : IAsyncLifetime
         // Warm up — first request triggers DB creation + seed
         await Client.GetAsync("/health/ready");
 
-        // Production seed only creates roles + admin/cashier; tests need a deterministic
-        // catalog (modifiers, categories, products) so legacy tests that hard-code IDs work.
+        // Production seed only creates roles; tests need a deterministic catalog
+        // (modifiers, categories, products) so legacy tests that hard-code IDs work,
+        // plus the admin/cashier accounts that AsAdmin/AsCashier/AsAdminViaPin etc. assume.
         await TestSeed.SeedCatalogAsync(Factory.Services);
+        var (adminId, cashierId) = await TestSeed.SeedTestUsersAsync(Factory.Services);
+        AdminUserId = adminId;
+        CashierUserId = cashierId;
     }
 
     public Task DisposeAsync()
@@ -54,10 +63,10 @@ public class TestFixture : IAsyncLifetime
     }
 
     public async Task<string> GetAdminToken()
-        => await GetToken("admin@brewbar.local", "Admin123!");
+        => await GetToken(TestSeed.AdminEmail, TestSeed.AdminPassword);
 
     public async Task<string> GetCashierToken()
-        => await GetToken("cashier@brewbar.local", "Cashier123!");
+        => await GetToken(TestSeed.CashierEmail, TestSeed.CashierPassword);
 
     public HttpClient CreateAuthenticatedClient(string token)
     {
@@ -72,19 +81,19 @@ public class TestFixture : IAsyncLifetime
     public async Task<HttpClient> AsCashier()
         => CreateAuthenticatedClient(await GetCashierToken());
 
-    public async Task<string> GetPinToken(string pin)
+    public async Task<string> GetPinToken(string userId, string pin)
     {
-        var response = await Client.PostAsJsonAsync("/api/auth/pin-login", new { pin });
+        var response = await Client.PostAsJsonAsync("/api/auth/pin-login", new { userId, pin });
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         return json.GetProperty("token").GetString()!;
     }
 
-    /// <summary>Authenticated as the seeded admin via PIN (1234) — token carries auth_method=pin.</summary>
+    /// <summary>Authenticated as the seeded admin via PIN — token carries auth_method=pin.</summary>
     public async Task<HttpClient> AsAdminViaPin()
-        => CreateAuthenticatedClient(await GetPinToken("1234"));
+        => CreateAuthenticatedClient(await GetPinToken(AdminUserId, TestSeed.AdminPin));
 
-    /// <summary>Authenticated as the seeded cashier via PIN (0000) — token carries auth_method=pin.</summary>
+    /// <summary>Authenticated as the seeded cashier via PIN — token carries auth_method=pin.</summary>
     public async Task<HttpClient> AsCashierViaPin()
-        => CreateAuthenticatedClient(await GetPinToken("0000"));
+        => CreateAuthenticatedClient(await GetPinToken(CashierUserId, TestSeed.CashierPin));
 }
