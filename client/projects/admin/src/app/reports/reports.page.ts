@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
+import { DecimalPipe, DatePipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -48,7 +49,7 @@ interface PaymentSummary {
   selector: 'app-reports',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     FormsModule,
     MatCardModule,
     MatIconModule,
@@ -80,17 +81,17 @@ interface PaymentSummary {
         </mat-card>
         <mat-card class="kpi-card">
           <mat-icon>attach_money</mat-icon>
-          <div class="kpi-value">{{ daily()!.grossSales | currency }}</div>
+          <div class="kpi-value">{{ daily()!.grossSales | appCurrency }}</div>
           <div class="kpi-label">Gross Sales</div>
         </mat-card>
         <mat-card class="kpi-card">
           <mat-icon>account_balance</mat-icon>
-          <div class="kpi-value">{{ daily()!.netSales | currency }}</div>
+          <div class="kpi-value">{{ daily()!.netSales | appCurrency }}</div>
           <div class="kpi-label">Net Sales</div>
         </mat-card>
         <mat-card class="kpi-card">
           <mat-icon>trending_up</mat-icon>
-          <div class="kpi-value">{{ daily()!.averageOrderValue | currency }}</div>
+          <div class="kpi-value">{{ daily()!.averageOrderValue | appCurrency }}</div>
           <div class="kpi-label">Avg Order</div>
         </mat-card>
         <mat-card class="kpi-card">
@@ -116,7 +117,7 @@ interface PaymentSummary {
                 <div class="bar-row">
                   <mat-progress-bar mode="determinate" [value]="cashPercent()"></mat-progress-bar>
                   <span
-                    >{{ paymentSummary()!.cashTotal | currency }} ({{
+                    >{{ paymentSummary()!.cashTotal | appCurrency }} ({{
                       paymentSummary()!.cashCount
                     }})</span
                   >
@@ -131,7 +132,7 @@ interface PaymentSummary {
                     [value]="cardPercent()"
                   ></mat-progress-bar>
                   <span
-                    >{{ paymentSummary()!.cardTotal | currency }} ({{
+                    >{{ paymentSummary()!.cardTotal | appCurrency }} ({{
                       paymentSummary()!.cardCount
                     }})</span
                   >
@@ -141,7 +142,7 @@ interface PaymentSummary {
                 <div class="payment-bar">
                   <div class="bar-label">Refunds</div>
                   <span class="refund-text"
-                    >{{ paymentSummary()!.refundTotal | currency }} ({{
+                    >{{ paymentSummary()!.refundTotal | appCurrency }} ({{
                       paymentSummary()!.refundCount
                     }})</span
                   >
@@ -159,7 +160,7 @@ interface PaymentSummary {
               @for (h of daily()!.hourlySales; track h.hour) {
                 <div
                   class="hour-bar"
-                  [title]="h.hour + ':00 — ' + h.orderCount + ' orders, ' + (h.total | currency)"
+                  [title]="h.hour + ':00 — ' + h.orderCount + ' orders, ' + (h.total | appCurrency)"
                 >
                   <div class="hour-fill" [style.height.%]="hourPercent(h.total)"></div>
                   <div class="hour-label">{{ h.hour }}</div>
@@ -193,7 +194,7 @@ interface PaymentSummary {
             </ng-container>
             <ng-container matColumnDef="revenue">
               <th mat-header-cell *matHeaderCellDef>Revenue</th>
-              <td mat-cell *matCellDef="let p">{{ p.revenue | currency }}</td>
+              <td mat-cell *matCellDef="let p">{{ p.revenue | appCurrency }}</td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="productColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: productColumns"></tr>

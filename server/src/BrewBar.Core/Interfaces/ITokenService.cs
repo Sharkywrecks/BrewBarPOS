@@ -4,5 +4,5 @@ namespace BrewBar.Core.Interfaces;
 
 public interface ITokenService
 {
-    Task<string> CreateToken(AppUser user, CancellationToken ct = default);
+    Task<string> CreateToken(AppUser user, string authMethod, CancellationToken ct = default);
 }

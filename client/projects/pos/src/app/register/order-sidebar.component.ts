@@ -1,5 +1,5 @@
 import { Component, inject, output } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
@@ -16,7 +16,7 @@ import {
   selector: 'app-order-sidebar',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
@@ -51,7 +51,7 @@ import {
         <div class="totals">
           <div class="total-row">
             <span>Subtotal (ex-VAT)</span>
-            <span>{{ cart.subtotal() | currency }}</span>
+            <span>{{ cart.subtotal() | appCurrency }}</span>
           </div>
           @if (cart.orderDiscount().amount > 0) {
             <div class="total-row discount-row">
@@ -65,16 +65,16 @@ import {
                   <mat-icon>close</mat-icon>
                 </button>
               </span>
-              <span>-{{ cart.orderDiscount().amount | currency }}</span>
+              <span>-{{ cart.orderDiscount().amount | appCurrency }}</span>
             </div>
           }
           <div class="total-row">
             <span>VAT</span>
-            <span>{{ cart.taxAmount() | currency }}</span>
+            <span>{{ cart.taxAmount() | appCurrency }}</span>
           </div>
           <div class="total-row grand-total">
             <span>Total</span>
-            <span>{{ cart.total() | currency }}</span>
+            <span>{{ cart.total() | appCurrency }}</span>
           </div>
         </div>
 
@@ -109,7 +109,7 @@ import {
             (click)="pay.emit()"
             [disabled]="cart.isEmpty()"
           >
-            Pay {{ cart.total() | currency }}
+            Pay {{ cart.total() | appCurrency }}
           </button>
         </div>
       </div>

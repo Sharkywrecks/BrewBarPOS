@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
@@ -17,7 +18,7 @@ import { firstValueFrom } from 'rxjs';
   selector: 'app-orders',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     DatePipe,
     FormsModule,
     MatTableModule,
@@ -80,7 +81,7 @@ import { firstValueFrom } from 'rxjs';
 
         <ng-container matColumnDef="total">
           <th mat-header-cell *matHeaderCellDef>Total</th>
-          <td mat-cell *matCellDef="let o">{{ o.total | currency }}</td>
+          <td mat-cell *matCellDef="let o">{{ o.total | appCurrency }}</td>
         </ng-container>
 
         <ng-container matColumnDef="status">

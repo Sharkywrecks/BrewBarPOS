@@ -1,13 +1,13 @@
 import { Component, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { CartLineItem } from '../store/cart.models';
 
 @Component({
   selector: 'app-order-line-item-row',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, CurrencyPipe],
+  imports: [MatIconModule, MatButtonModule, AppCurrencyPipe],
   template: `
     <div class="line-item">
       <div class="item-info">
@@ -23,7 +23,7 @@ import { CartLineItem } from '../store/cart.models';
           </div>
         }
         @if (item().discountAmount > 0) {
-          <div class="discount-info">-{{ item().discountAmount | currency }} discount</div>
+          <div class="discount-info">-{{ item().discountAmount | appCurrency }} discount</div>
         }
       </div>
       <div class="item-controls">
@@ -36,7 +36,7 @@ import { CartLineItem } from '../store/cart.models';
             <mat-icon>add</mat-icon>
           </button>
         </div>
-        <span class="line-total">{{ lineTotal() | currency }}</span>
+        <span class="line-total">{{ lineTotal() | appCurrency }}</span>
         <button
           mat-icon-button
           class="discount-item-btn"

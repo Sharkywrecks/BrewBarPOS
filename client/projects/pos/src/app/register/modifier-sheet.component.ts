@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { FormsModule } from '@angular/forms';
 import { ProductDto, ProductVariantDto, ProductModifierDto, ModifierOptionDto } from 'api-client';
 import { CartLineItem, CartModifierItem } from '../store/cart.models';
@@ -28,7 +28,7 @@ interface ModifierSelection {
     MatRadioModule,
     MatCheckboxModule,
     MatDividerModule,
-    CurrencyPipe,
+    AppCurrencyPipe,
     FormsModule,
   ],
   template: `
@@ -41,7 +41,7 @@ interface ModifierSelection {
           <mat-radio-group [(ngModel)]="selectedVariantId" class="variant-group">
             @for (v of data.product.variants!; track v.id) {
               <mat-radio-button [value]="v.id" class="variant-option">
-                {{ v.name }} — {{ v.priceOverride | currency }}
+                {{ v.name }} — {{ v.priceOverride | appCurrency }}
               </mat-radio-button>
             }
           </mat-radio-group>
@@ -68,7 +68,7 @@ interface ModifierSelection {
                 <mat-radio-button [value]="opt.id" class="modifier-option">
                   {{ opt.name }}
                   @if (opt.price) {
-                    <span class="option-price">+{{ opt.price | currency }}</span>
+                    <span class="option-price">+{{ opt.price | appCurrency }}</span>
                   }
                 </mat-radio-button>
               }
@@ -83,7 +83,7 @@ interface ModifierSelection {
                 >
                   {{ opt.name }}
                   @if (opt.price) {
-                    <span class="option-price">+{{ opt.price | currency }}</span>
+                    <span class="option-price">+{{ opt.price | appCurrency }}</span>
                   }
                 </mat-checkbox>
               }
@@ -102,7 +102,7 @@ interface ModifierSelection {
           [disabled]="!canAdd()"
           (click)="onAdd()"
         >
-          Add to Order — {{ itemPrice() | currency }}
+          Add to Order — {{ itemPrice() | appCurrency }}
         </button>
       </div>
     </div>

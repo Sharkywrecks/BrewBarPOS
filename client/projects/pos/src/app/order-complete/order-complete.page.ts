@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -17,7 +17,7 @@ interface OrderCompleteState {
 @Component({
   selector: 'app-order-complete-page',
   standalone: true,
-  imports: [CurrencyPipe, MatButtonModule, MatIconModule, MatCardModule],
+  imports: [AppCurrencyPipe, MatButtonModule, MatIconModule, MatCardModule],
   template: `
     <div class="complete-container">
       <mat-card class="complete-card">
@@ -36,7 +36,7 @@ interface OrderCompleteState {
           <div class="details">
             <div class="detail-row">
               <span>Total</span>
-              <span>{{ orderState().total | currency }}</span>
+              <span>{{ orderState().total | appCurrency }}</span>
             </div>
             <div class="detail-row">
               <span>Payment</span>
@@ -45,7 +45,7 @@ interface OrderCompleteState {
             @if (orderState().paymentMethod === PaymentMethod.Cash && orderState().change > 0) {
               <div class="detail-row change">
                 <span>Change</span>
-                <span>{{ orderState().change | currency }}</span>
+                <span>{{ orderState().change | appCurrency }}</span>
               </div>
             }
           </div>

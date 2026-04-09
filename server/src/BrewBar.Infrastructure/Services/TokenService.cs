@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BrewBar.Core.Constants;
 using BrewBar.Core.Entities.Identity;
 using BrewBar.Core.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -20,13 +21,14 @@ public class TokenService : ITokenService
         _userManager = userManager;
     }
 
-    public async Task<string> CreateToken(AppUser user, CancellationToken ct = default)
+    public async Task<string> CreateToken(AppUser user, string authMethod, CancellationToken ct = default)
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.Name, user.DisplayName)
+            new(ClaimTypes.Name, user.DisplayName),
+            new(AuthClaims.AuthMethod, authMethod)
         };
 
         var roles = await _userManager.GetRolesAsync(user);

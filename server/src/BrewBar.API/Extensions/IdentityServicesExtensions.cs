@@ -1,4 +1,5 @@
 using System.Text;
+using BrewBar.Core.Constants;
 using BrewBar.Core.Entities.Identity;
 using BrewBar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -55,7 +56,21 @@ public static class IdentityServicesExtensions
                 };
             });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            // Admin/manager endpoints require BOTH the role AND a token issued via password
+            // login. Pin tokens are scoped to POS and must not reach elevated endpoints,
+            // even if a cashier somehow holds an Admin/Manager role.
+            options.AddPolicy(Policies.RequireAdmin, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(Roles.Admin)
+                .RequireClaim(AuthClaims.AuthMethod, AuthClaims.AuthMethodPassword));
+
+            options.AddPolicy(Policies.RequireAdminOrManager, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(Roles.Admin, Roles.Manager)
+                .RequireClaim(AuthClaims.AuthMethod, AuthClaims.AuthMethodPassword));
+        });
 
         return services;
     }

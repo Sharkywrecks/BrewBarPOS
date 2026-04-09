@@ -11,6 +11,7 @@ import { routes } from './app.routes';
 import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
 import { RuntimeConfigService } from './services/runtime-config.service';
+import { SettingsService } from './services/settings.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -30,5 +31,11 @@ export const appConfig: ApplicationConfig = {
       deps: [RuntimeConfigService],
     },
     { provide: CLIENT_TOKEN, useClass: Client },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (settings: SettingsService) => () => settings.load(),
+      deps: [SettingsService],
+      multi: true,
+    },
   ],
 };

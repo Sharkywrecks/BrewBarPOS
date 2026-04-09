@@ -5,7 +5,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { DiscountType } from 'api-client';
 
 export interface DiscountDialogData {
@@ -29,7 +29,7 @@ export interface DiscountDialogResult {
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
-    CurrencyPipe,
+    AppCurrencyPipe,
   ],
   template: `
     <h2 mat-dialog-title>Discount — {{ data.itemLabel }}</h2>
@@ -49,7 +49,7 @@ export interface DiscountDialogResult {
         }
       </mat-form-field>
 
-      <div class="preview">Discount: {{ computedAmount() | currency }}</div>
+      <div class="preview">Discount: {{ computedAmount() | appCurrency }}</div>
 
       <mat-form-field appearance="outline" class="reason-field">
         <mat-label>Reason (required)</mat-label>

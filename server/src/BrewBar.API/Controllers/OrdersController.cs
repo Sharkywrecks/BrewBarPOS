@@ -197,7 +197,7 @@ public class OrdersController : BaseApiController
     }
 
     [HttpPost("{id}/void")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<OrderDto>> VoidOrder(int id, VoidOrderDto dto, CancellationToken ct)
     {
         var order = await _unitOfWork.GetQueryable<Order>()

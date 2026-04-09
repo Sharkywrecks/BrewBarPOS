@@ -9,6 +9,8 @@ const TOKEN_KEY = 'brewbar_token';
 export class AuthService {
   readonly currentUser = signal<UserDto | null>(null);
   readonly isAuthenticated = computed(() => !!this.currentUser());
+  readonly authMethod = computed(() => this.currentUser()?.authMethod ?? null);
+  readonly isPasswordAuthenticated = computed(() => this.authMethod() === 'password');
 
   constructor(
     @Inject(CLIENT_TOKEN) private readonly client: IClient,

@@ -61,7 +61,7 @@ public class CategoriesController : BaseApiController
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto dto, CancellationToken ct)
     {
         var category = new Category
@@ -87,7 +87,7 @@ public class CategoriesController : BaseApiController
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<CategoryDto>> UpdateCategory(int id, UpdateCategoryDto dto, CancellationToken ct)
     {
         var category = await _unitOfWork.Repository<Category>().GetByIdAsync(id, ct);
@@ -112,7 +112,7 @@ public class CategoriesController : BaseApiController
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult> DeleteCategory(int id, CancellationToken ct)
     {
         var category = await _unitOfWork.GetQueryable<Category>()

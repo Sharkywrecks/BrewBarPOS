@@ -36,7 +36,7 @@ public class AuthController : BaseApiController
         var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
         if (!result.Succeeded) return Unauthorized(new ApiResponse(401, "Invalid email or password"));
 
-        return await CreateUserDto(user, ct);
+        return await CreateUserDto(user, AuthClaims.AuthMethodPassword, ct);
     }
 
     [HttpPost("pin-login")]
@@ -45,11 +45,11 @@ public class AuthController : BaseApiController
         var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Pin == dto.Pin, ct);
         if (user == null) return Unauthorized(new ApiResponse(401, "Invalid PIN"));
 
-        return await CreateUserDto(user, ct);
+        return await CreateUserDto(user, AuthClaims.AuthMethodPin, ct);
     }
 
     [HttpPost("register")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult<UserDto>> Register(RegisterDto dto, CancellationToken ct)
     {
         if (await _userManager.FindByEmailAsync(dto.Email) != null)
@@ -70,7 +70,7 @@ public class AuthController : BaseApiController
         var role = validRoles.Contains(dto.Role) ? dto.Role : Roles.Cashier;
         await _userManager.AddToRoleAsync(user, role);
 
-        return await CreateUserDto(user, ct);
+        return await CreateUserDto(user, AuthClaims.AuthMethodPassword, ct);
     }
 
     /// <summary>
@@ -113,7 +113,18 @@ public class AuthController : BaseApiController
         var user = await _userManager.FindByIdAsync(userId!);
         if (user == null) return NotFound(new ApiResponse(404));
 
-        return await CreateUserDto(user, ct);
+        // Preserve the auth method from the existing token rather than re-issuing one — calling
+        // this endpoint must not silently upgrade a pin session into a password session.
+        var authMethod = User.FindFirstValue(AuthClaims.AuthMethod) ?? AuthClaims.AuthMethodPin;
+        var roles = await _userManager.GetRolesAsync(user);
+        return new UserDto
+        {
+            Id = user.Id,
+            Email = user.Email ?? string.Empty,
+            DisplayName = user.DisplayName,
+            AuthMethod = authMethod,
+            Roles = roles.ToList()
+        };
     }
 
     [HttpGet("staff")]
@@ -128,7 +139,7 @@ public class AuthController : BaseApiController
     }
 
     [HttpGet("users")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<IList<UserDto>>> GetUsers(CancellationToken ct)
     {
         var users = await _userManager.Users.ToListAsync(ct);
@@ -149,7 +160,7 @@ public class AuthController : BaseApiController
         return Ok(result);
     }
 
-    private async Task<UserDto> CreateUserDto(AppUser user, CancellationToken ct)
+    private async Task<UserDto> CreateUserDto(AppUser user, string authMethod, CancellationToken ct)
     {
         var roles = await _userManager.GetRolesAsync(user);
         return new UserDto
@@ -157,7 +168,8 @@ public class AuthController : BaseApiController
             Id = user.Id,
             Email = user.Email ?? string.Empty,
             DisplayName = user.DisplayName,
-            Token = await _tokenService.CreateToken(user, ct),
+            Token = await _tokenService.CreateToken(user, authMethod, ct),
+            AuthMethod = authMethod,
             Roles = roles.ToList()
         };
     }

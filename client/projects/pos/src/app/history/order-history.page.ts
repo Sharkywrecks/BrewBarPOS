@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, Inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
@@ -17,7 +18,7 @@ import { firstValueFrom } from 'rxjs';
   selector: 'app-order-history',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     DatePipe,
     MatButtonModule,
     MatIconModule,
@@ -48,7 +49,7 @@ import { firstValueFrom } from 'rxjs';
 
         <ng-container matColumnDef="total">
           <th mat-header-cell *matHeaderCellDef>Total</th>
-          <td mat-cell *matCellDef="let o">{{ o.total | currency }}</td>
+          <td mat-cell *matCellDef="let o">{{ o.total | appCurrency }}</td>
         </ng-container>
 
         <ng-container matColumnDef="status">

@@ -91,7 +91,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductDto dto, CancellationToken ct)
     {
         var category = await _unitOfWork.Repository<Category>().GetByIdAsync(dto.CategoryId, ct);
@@ -124,7 +124,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<ProductDto>> UpdateProduct(int id, UpdateProductDto dto, CancellationToken ct)
     {
         var product = await _unitOfWork.GetQueryable<Product>()
@@ -153,7 +153,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult> DeleteProduct(int id, CancellationToken ct)
     {
         var product = await _unitOfWork.Repository<Product>().GetByIdAsync(id, ct);
@@ -167,7 +167,7 @@ public class ProductsController : BaseApiController
     // --- Variants ---
 
     [HttpPost("{productId}/variants")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<ProductVariantDto>> CreateVariant(int productId, CreateProductVariantDto dto, CancellationToken ct)
     {
         var product = await _unitOfWork.Repository<Product>().GetByIdAsync(productId, ct);
@@ -196,7 +196,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpPut("{productId}/variants/{variantId}")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<ProductVariantDto>> UpdateVariant(int productId, int variantId, UpdateProductVariantDto dto, CancellationToken ct)
     {
         var variant = await _unitOfWork.GetQueryable<ProductVariant>()
@@ -222,7 +222,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpDelete("{productId}/variants/{variantId}")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult> DeleteVariant(int productId, int variantId, CancellationToken ct)
     {
         var variant = await _unitOfWork.GetQueryable<ProductVariant>()
@@ -238,7 +238,7 @@ public class ProductsController : BaseApiController
     // --- Product-Modifier Assignments ---
 
     [HttpPost("{productId}/modifiers/{modifierId}")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult> AssignModifier(int productId, int modifierId, CancellationToken ct)
     {
         var product = await _unitOfWork.Repository<Product>().GetByIdAsync(productId, ct);
@@ -263,7 +263,7 @@ public class ProductsController : BaseApiController
     }
 
     [HttpDelete("{productId}/modifiers/{modifierId}")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult> RemoveModifier(int productId, int modifierId, CancellationToken ct)
     {
         var pm = await _unitOfWork.GetQueryable<ProductModifier>()

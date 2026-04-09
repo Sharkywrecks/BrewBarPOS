@@ -1,13 +1,13 @@
 import { Component, input, output } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatRippleModule } from '@angular/material/core';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { ProductDto } from 'api-client';
 
 @Component({
   selector: 'app-product-card',
   standalone: true,
-  imports: [MatCardModule, MatRippleModule, CurrencyPipe],
+  imports: [MatCardModule, MatRippleModule, AppCurrencyPipe],
   template: `
     <mat-card
       class="product-card"
@@ -17,7 +17,7 @@ import { ProductDto } from 'api-client';
     >
       <mat-card-content>
         <div class="product-name">{{ product().name }}</div>
-        <div class="product-price">{{ product().basePrice | currency }}</div>
+        <div class="product-price">{{ product().basePrice | appCurrency }}</div>
         @if (product().variants && product().variants!.length > 0) {
           <div class="variant-hint">{{ product().variants!.length }} sizes</div>
         }

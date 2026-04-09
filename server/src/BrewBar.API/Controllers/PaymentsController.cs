@@ -116,7 +116,7 @@ public class PaymentsController : BaseApiController
     }
 
     [HttpPost("refund")]
-    [Authorize(Roles = Roles.AdminOrManager)]
+    [Authorize(Policy = Policies.RequireAdminOrManager)]
     public async Task<ActionResult<RefundDto>> CreateRefund(CreateRefundDto dto, CancellationToken ct)
     {
         var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(dto.OriginalPaymentId, ct);

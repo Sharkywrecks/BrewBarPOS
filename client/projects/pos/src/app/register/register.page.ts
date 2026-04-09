@@ -123,9 +123,9 @@ export class RegisterPage implements OnInit {
 
   onProductSelected(product: ProductDto): void {
     const hasVariants = product.variants && product.variants.length > 0;
-    const hasRequiredModifiers = product.modifiers?.some((m) => m.isRequired);
+    const hasModifiers = (product.modifiers?.length ?? 0) > 0;
 
-    if (!hasVariants && !hasRequiredModifiers) {
+    if (!hasVariants && !hasModifiers) {
       // Add directly to cart
       const item: CartLineItem = {
         localId: crypto.randomUUID(),

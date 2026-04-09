@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,7 +21,7 @@ import { SettingsService } from '../services/settings.service';
   selector: 'app-checkout-page',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     FormsModule,
     MatButtonModule,
     MatButtonToggleModule,
@@ -51,21 +51,21 @@ import { SettingsService } from '../services/settings.service';
                   ({{ item.variantName }})
                 }
               </span>
-              <span>{{ lineTotal(item) | currency }}</span>
+              <span>{{ lineTotal(item) | appCurrency }}</span>
             </div>
           }
           <mat-divider />
           <div class="summary-line">
             <span>Subtotal (ex-VAT)</span>
-            <span>{{ cart.subtotal() | currency }}</span>
+            <span>{{ cart.subtotal() | appCurrency }}</span>
           </div>
           <div class="summary-line">
             <span>VAT</span>
-            <span>{{ cart.taxAmount() | currency }}</span>
+            <span>{{ cart.taxAmount() | appCurrency }}</span>
           </div>
           <div class="summary-line total">
             <span>Total</span>
-            <span>{{ cart.total() | currency }}</span>
+            <span>{{ cart.total() | appCurrency }}</span>
           </div>
         </div>
 
@@ -113,8 +113,8 @@ import { SettingsService } from '../services/settings.service';
         }
         @if (tipAmount() > 0) {
           <div class="tip-display">
-            Tip: <strong>{{ tipAmount() | currency }}</strong> — Grand Total:
-            <strong>{{ grandTotal() | currency }}</strong>
+            Tip: <strong>{{ tipAmount() | appCurrency }}</strong> — Grand Total:
+            <strong>{{ grandTotal() | appCurrency }}</strong>
           </div>
         }
 
@@ -136,7 +136,7 @@ import { SettingsService } from '../services/settings.service';
           <div class="cash-section">
             <h3>Amount Tendered</h3>
             <div class="cash-display">
-              {{ cashAmount() | currency }}
+              {{ cashAmount() | appCurrency }}
             </div>
             <div class="quick-amounts">
               @for (amount of quickAmounts(); track amount) {
@@ -145,7 +145,7 @@ import { SettingsService } from '../services/settings.service';
                   (click)="setCashAmount(amount)"
                   [class.selected]="cashAmount() === amount"
                 >
-                  {{ amount | currency }}
+                  {{ amount | appCurrency }}
                 </button>
               }
               <button mat-stroked-button (click)="setCashAmount(grandTotal())">Exact</button>
@@ -160,7 +160,7 @@ import { SettingsService } from '../services/settings.service';
             </div>
             @if (change() > 0) {
               <div class="change-display">
-                Change: <strong>{{ change() | currency }}</strong>
+                Change: <strong>{{ change() | appCurrency }}</strong>
               </div>
             }
           </div>
@@ -177,7 +177,7 @@ import { SettingsService } from '../services/settings.service';
           @if (submitting()) {
             <mat-spinner diameter="24" color="accent"></mat-spinner>
           } @else if (paymentMethod() === PaymentMethod.Cash) {
-            Complete — Change {{ change() | currency }}
+            Complete — Change {{ change() | appCurrency }}
           } @else {
             Process Card Payment
           }

@@ -5147,6 +5147,7 @@ export interface UserDto {
   email?: string;
   displayName?: string;
   token?: string;
+  authMethod?: string;
   roles?: string[];
 }
 

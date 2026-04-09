@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +26,7 @@ import { firstValueFrom } from 'rxjs';
   selector: 'app-order-detail',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     DatePipe,
     MatCardModule,
     MatButtonModule,
@@ -58,15 +59,15 @@ import { firstValueFrom } from 'rxjs';
               <span>Cashier</span><span>{{ order()!.cashierName ?? 'N/A' }}</span>
             </div>
             <div class="info-row">
-              <span>Subtotal</span><span>{{ order()!.subtotal | currency }}</span>
+              <span>Subtotal</span><span>{{ order()!.subtotal | appCurrency }}</span>
             </div>
             <div class="info-row">
               <span>Tax ({{ (order()!.taxRate! * 100).toFixed(1) }}%)</span
-              ><span>{{ order()!.taxAmount | currency }}</span>
+              ><span>{{ order()!.taxAmount | appCurrency }}</span>
             </div>
             <mat-divider />
             <div class="info-row total">
-              <span>Total</span><span>{{ order()!.total | currency }}</span>
+              <span>Total</span><span>{{ order()!.total | appCurrency }}</span>
             </div>
             @if (order()!.notes) {
               <div class="notes">{{ order()!.notes }}</div>
@@ -94,9 +95,9 @@ import { firstValueFrom } from 'rxjs';
                   }}</mat-chip>
                 </div>
                 <div class="payment-amounts">
-                  <span>{{ p.total | currency }}</span>
+                  <span>{{ p.total | appCurrency }}</span>
                   @if (p.changeGiven! > 0) {
-                    <span class="change">Change: {{ p.changeGiven | currency }}</span>
+                    <span class="change">Change: {{ p.changeGiven | appCurrency }}</span>
                   }
                 </div>
                 @if (p.status === PaymentStatus.Completed) {
@@ -137,11 +138,11 @@ import { firstValueFrom } from 'rxjs';
             </ng-container>
             <ng-container matColumnDef="unitPrice">
               <th mat-header-cell *matHeaderCellDef>Unit Price</th>
-              <td mat-cell *matCellDef="let li">{{ li.unitPrice | currency }}</td>
+              <td mat-cell *matCellDef="let li">{{ li.unitPrice | appCurrency }}</td>
             </ng-container>
             <ng-container matColumnDef="lineTotal">
               <th mat-header-cell *matHeaderCellDef>Total</th>
-              <td mat-cell *matCellDef="let li">{{ li.lineTotal | currency }}</td>
+              <td mat-cell *matCellDef="let li">{{ li.lineTotal | appCurrency }}</td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="itemColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: itemColumns"></tr>

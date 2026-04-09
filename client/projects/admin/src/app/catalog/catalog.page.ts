@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { AppCurrencyPipe } from '../services/app-currency.pipe';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -37,7 +37,7 @@ import { ProductModifiersDialogComponent } from './product-modifiers-dialog.comp
   selector: 'app-catalog',
   standalone: true,
   imports: [
-    CurrencyPipe,
+    AppCurrencyPipe,
     MatTableModule,
     MatCardModule,
     MatButtonModule,
@@ -130,7 +130,7 @@ import { ProductModifiersDialogComponent } from './product-modifiers-dialog.comp
 
             <ng-container matColumnDef="basePrice">
               <th mat-header-cell *matHeaderCellDef>Price</th>
-              <td mat-cell *matCellDef="let p">{{ p.basePrice | currency }}</td>
+              <td mat-cell *matCellDef="let p">{{ p.basePrice | appCurrency }}</td>
             </ng-container>
 
             <ng-container matColumnDef="variants">

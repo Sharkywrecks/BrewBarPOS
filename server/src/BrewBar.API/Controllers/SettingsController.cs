@@ -43,7 +43,7 @@ public class SettingsController : BaseApiController
     /// Update business settings. Admin only.
     /// </summary>
     [HttpPut]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult<BusinessSettingsDto>> UpdateSettings(
         UpdateBusinessSettingsDto dto, CancellationToken ct)
     {

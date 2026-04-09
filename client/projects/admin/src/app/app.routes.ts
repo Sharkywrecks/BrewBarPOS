@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from 'auth';
+import { adminAuthGuard } from 'auth';
 import { AdminShellComponent } from './layout/admin-shell.component';
 
 export const routes: Routes = [
@@ -10,7 +10,7 @@ export const routes: Routes = [
   {
     path: '',
     component: AdminShellComponent,
-    canActivate: [authGuard],
+    canActivate: [adminAuthGuard],
     children: [
       {
         path: 'dashboard',

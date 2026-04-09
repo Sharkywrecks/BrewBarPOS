@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BrewBar.API.Controllers;
 
-[Authorize(Roles = Roles.AdminOrManager)]
+[Authorize(Policy = Policies.RequireAdminOrManager)]
 public class ModifiersController : BaseApiController
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -85,7 +85,7 @@ public class ModifiersController : BaseApiController
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = Policies.RequireAdmin)]
     public async Task<ActionResult> DeleteModifier(int id, CancellationToken ct)
     {
         var modifier = await _unitOfWork.GetQueryable<Modifier>()
