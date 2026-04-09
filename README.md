@@ -42,10 +42,9 @@ Most POS systems are cloud-locked SaaS products with per-terminal fees. BrewBar 
 ### Infrastructure
 - Role-based access — Admin, Manager, Cashier
 - Multi-terminal support
-- Menu import from Excel (.xlsx) during installation or via admin
+- Menu import from Excel (.xlsx) via the admin app
 - Configurable store name and tax rate (set during install)
 - Rate-limited API with structured error handling
-- Automatic database seeding with sample menu on first run
 
 ## Quick Start
 

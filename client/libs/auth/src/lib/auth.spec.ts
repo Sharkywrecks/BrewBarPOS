@@ -108,6 +108,47 @@ describe('AuthService', () => {
     });
   });
 
+  describe('authMethod', () => {
+    it('should expose null authMethod when no user', () => {
+      expect(service.authMethod()).toBeNull();
+      expect(service.isPasswordAuthenticated()).toBe(false);
+    });
+
+    it('should expose pin authMethod after pin login', async () => {
+      const user = makeUser({ authMethod: 'pin' });
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(of(user));
+
+      await service.pinLogin('1234');
+
+      expect(service.authMethod()).toBe('pin');
+      expect(service.isPasswordAuthenticated()).toBe(false);
+    });
+
+    it('should expose password authMethod after loading a password-issued token', async () => {
+      localStorage.setItem('brewbar_token', 'stored-jwt');
+      (client.auth_GetCurrentUser as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ authMethod: 'password' })),
+      );
+
+      await service.loadStoredUser();
+
+      expect(service.authMethod()).toBe('password');
+      expect(service.isPasswordAuthenticated()).toBe(true);
+    });
+
+    it('should reset authMethod on logout', async () => {
+      (client.auth_PinLogin as ReturnType<typeof vi.fn>).mockReturnValue(
+        of(makeUser({ authMethod: 'pin' })),
+      );
+      await service.pinLogin('1234');
+
+      service.logout();
+
+      expect(service.authMethod()).toBeNull();
+      expect(service.isPasswordAuthenticated()).toBe(false);
+    });
+  });
+
   describe('logout', () => {
     it('should clear user and token', async () => {
       // First log in

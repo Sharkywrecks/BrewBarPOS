@@ -3,9 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { CartStore } from './cart.store';
 import { CartLineItem } from './cart.models';
 import { SettingsService } from '../services/settings.service';
+import { ShiftService } from '../services/shift.service';
 import { CartPersistenceService } from 'sync';
 import { HttpClient } from '@angular/common/http';
-import { API_BASE_URL } from 'api-client';
+import { API_BASE_URL, CLIENT_TOKEN } from 'api-client';
 
 function makeItem(overrides: Partial<CartLineItem> = {}): CartLineItem {
   return {
@@ -15,6 +16,11 @@ function makeItem(overrides: Partial<CartLineItem> = {}): CartLineItem {
     variantName: '24 oz',
     unitPrice: 7.5,
     quantity: 1,
+    taxRate: 0.0875,
+    discountAmount: 0,
+    discountType: null,
+    discountPercent: null,
+    discountReason: null,
     modifierItems: [],
     ...overrides,
   };
@@ -41,6 +47,11 @@ describe('CartStore', () => {
           provide: CartPersistenceService,
           useValue: { save: vi.fn(), load: vi.fn().mockResolvedValue(null), clear: vi.fn() },
         },
+        {
+          provide: ShiftService,
+          useValue: { currentShift: () => null, isOpen: () => false, refresh: vi.fn() },
+        },
+        { provide: CLIENT_TOKEN, useValue: {} },
         { provide: HttpClient, useValue: {} },
         { provide: API_BASE_URL, useValue: 'http://localhost:5000' },
       ],
@@ -99,13 +110,18 @@ describe('CartStore', () => {
     expect(store.isEmpty()).toBe(true);
   });
 
-  it('should calculate subtotal without modifiers', () => {
+  // Note: prices are VAT-inclusive (Seychelles VAT model). subtotal() returns
+  // the ex-VAT amount extracted from the inclusive total, total() is what the
+  // customer actually pays (inclusive), and taxAmount() is the difference.
+
+  it('should calculate subtotal without modifiers (ex-VAT extracted from inclusive)', () => {
     store.addItem(makeItem({ unitPrice: 7.5, quantity: 2 }));
 
-    expect(store.subtotal()).toBe(15.0);
+    // Inclusive: 7.50 * 2 = 15.00 → ex-VAT: 15 / 1.0875 ≈ 13.79
+    expect(store.subtotal()).toBe(13.79);
   });
 
-  it('should calculate subtotal with modifiers', () => {
+  it('should calculate subtotal with modifiers (ex-VAT extracted from inclusive)', () => {
     store.addItem(
       makeItem({
         unitPrice: 7.5,
@@ -117,8 +133,8 @@ describe('CartStore', () => {
       }),
     );
 
-    // (7.50 + 1.50 + 1.00) * 1 = 10.00
-    expect(store.subtotal()).toBe(10.0);
+    // Inclusive: (7.50 + 1.50 + 1.00) * 1 = 10.00 → ex-VAT: 10 / 1.0875 ≈ 9.20
+    expect(store.subtotal()).toBe(9.2);
   });
 
   it('should calculate subtotal with multiple items and modifiers', () => {
@@ -132,22 +148,25 @@ describe('CartStore', () => {
     );
     store.addItem(makeItem({ localId: 'b', unitPrice: 2.0, quantity: 2, modifierItems: [] }));
 
-    // (7.50 + 1.50) * 1 + 2.00 * 2 = 9.00 + 4.00 = 13.00
-    expect(store.subtotal()).toBe(13.0);
+    // Item A inclusive: 9.00 → ex-VAT 8.28
+    // Item B inclusive: 4.00 → ex-VAT 3.68
+    // Sum ex-VAT ≈ 11.96 (with floating-point noise)
+    expect(store.subtotal()).toBeCloseTo(11.96, 2);
   });
 
   it('should calculate tax amount rounded to 2 decimals', () => {
     // taxRate default is 0.0875
     store.addItem(makeItem({ unitPrice: 10.0, quantity: 1 }));
 
-    // 10.00 * 0.0875 = 0.875 → rounded to 0.88
-    expect(store.taxAmount()).toBe(0.88);
+    // Inclusive 10.00 → ex-VAT 9.20 → tax 0.80
+    expect(store.taxAmount()).toBe(0.8);
   });
 
-  it('should calculate total as subtotal + tax', () => {
+  it('should calculate total as the VAT-inclusive amount', () => {
     store.addItem(makeItem({ unitPrice: 10.0, quantity: 1 }));
 
-    expect(store.total()).toBe(10.0 + 0.88);
+    // total() is what the customer pays — the inclusive line gross
+    expect(store.total()).toBe(10.0);
   });
 
   it('should update notes', () => {

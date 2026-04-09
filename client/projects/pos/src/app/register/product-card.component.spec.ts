@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ComponentRef } from '@angular/core';
 import { ProductCardComponent } from './product-card.component';
-import { ProductDto } from 'api-client';
+import { ProductDto, Currency } from 'api-client';
+import { SettingsService } from '../services/settings.service';
+
+const settingsStub = {
+  settings: () => ({ storeName: 'Test', taxRate: 0.15, currency: Currency.SCR }),
+  get currencySymbol() {
+    return 'SCR ';
+  },
+};
 
 function makeProduct(overrides: Partial<ProductDto> = {}): ProductDto {
   return {
@@ -22,6 +30,7 @@ describe('ProductCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductCardComponent],
+      providers: [{ provide: SettingsService, useValue: settingsStub }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProductCardComponent);
@@ -47,7 +56,7 @@ describe('ProductCardComponent', () => {
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('$8.50');
+    expect(el.textContent).toContain('SCR 8.50');
   });
 
   it('should show variant count when variants exist', () => {

@@ -78,7 +78,7 @@
         </Control>
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="Next">
           <!-- Standalone → business setup dialog. Terminal → skip to verify. -->
-          <Publish Event="NewDialog" Value="MenuImportDlg" Condition="DEPLOY_MODE = &quot;standalone&quot;" Order="1" />
+          <Publish Event="NewDialog" Value="BusinessSetupDlg" Condition="DEPLOY_MODE = &quot;standalone&quot;" Order="1" />
           <Publish Event="NewDialog" Value="DeleteDataDlg" Condition="DEPLOY_MODE = &quot;terminal&quot;" Order="2" />
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
@@ -87,14 +87,14 @@
       </Dialog>
 
       <!-- ================================================================
-           INSTALL: Business Setup + Menu Import dialog (standalone only)
+           INSTALL: Business Setup dialog (standalone only)
            ================================================================ -->
-      <Dialog Id="MenuImportDlg" Width="370" Height="340" Title="BrewBar POS — Business Setup">
+      <Dialog Id="BusinessSetupDlg" Width="370" Height="240" Title="BrewBar POS — Business Setup">
         <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15"
                  Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Business Setup" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="320" Height="15"
                  Transparent="yes" NoPrefix="yes"
-                 Text="Configure your business details and optionally import a menu." />
+                 Text="Configure your business details and admin account." />
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
 
         <!-- Store Name -->
@@ -144,35 +144,20 @@
         <Control Id="AdminPinEdit" Type="Edit" X="240" Y="158" Width="60" Height="18"
                  Property="ADMIN_PIN" />
 
-        <!-- Menu Import -->
-        <Control Id="MenuSectionLabel" Type="Text" X="25" Y="184" Width="320" Height="12"
-                 NoPrefix="yes" Text="{\WixUI_Font_Bold}Menu Import (optional)" />
-        <Control Id="Intro" Type="Text" X="25" Y="198" Width="320" Height="20"
-                 NoPrefix="yes"
-                 Text="Browse for an Excel menu file, or leave blank to start with the sample menu." />
+        <Control Id="BottomLine" Type="Line" X="0" Y="204" Width="370" Height="0" />
 
-        <Control Id="FileLabel" Type="Text" X="25" Y="222" Width="320" Height="12"
-                 NoPrefix="yes" Text="Menu file path:" />
-        <Control Id="MenuFilePath" Type="Edit" X="25" Y="236" Width="275" Height="18"
-                 Property="MENU_FILE" />
-        <Control Id="BrowseBtn" Type="PushButton" X="305" Y="236" Width="45" Height="18" Text="Browse">
-          <Publish Event="DoAction" Value="BrowseMenuFile" />
-        </Control>
-
-        <Control Id="BottomLine" Type="Line" X="0" Y="304" Width="370" Height="0" />
-
-        <Control Id="Back" Type="PushButton" X="180" Y="313" Width="56" Height="17" Text="Back">
+        <Control Id="Back" Type="PushButton" X="180" Y="213" Width="56" Height="17" Text="Back">
           <Publish Event="NewDialog" Value="DeployModeDlg" />
         </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="313" Width="56" Height="17" Default="yes" Text="Next">
+        <Control Id="Next" Type="PushButton" X="236" Y="213" Width="56" Height="17" Default="yes" Text="Next">
           <Publish Event="NewDialog" Value="DeleteDataDlg" />
         </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="313" Width="56" Height="17" Cancel="yes" Text="Cancel">
+        <Control Id="Cancel" Type="PushButton" X="304" Y="213" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg" />
         </Control>
       </Dialog>
 
-      <!-- Wire: CustomizeDlg → DeployModeDlg → MenuImportDlg (standalone) or DeleteDataDlg (terminal)
+      <!-- Wire: CustomizeDlg → DeployModeDlg → BusinessSetupDlg (standalone) or DeleteDataDlg (terminal)
            Only during install (not removal). -->
       <Publish Dialog="CustomizeDlg" Control="Next" Event="NewDialog" Value="DeployModeDlg"
                Condition="NOT REMOVE~=&quot;ALL&quot;" Order="9000" />
@@ -207,8 +192,8 @@
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
 
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="Back">
-          <!-- During install: go back to MenuImportDlg (standalone) or DeployModeDlg (terminal) -->
-          <Publish Event="NewDialog" Value="MenuImportDlg" Condition="NOT REMOVE~=&quot;ALL&quot; AND DEPLOY_MODE = &quot;standalone&quot;" Order="1" />
+          <!-- During install: go back to BusinessSetupDlg (standalone) or DeployModeDlg (terminal) -->
+          <Publish Event="NewDialog" Value="BusinessSetupDlg" Condition="NOT REMOVE~=&quot;ALL&quot; AND DEPLOY_MODE = &quot;standalone&quot;" Order="1" />
           <Publish Event="NewDialog" Value="DeployModeDlg" Condition="NOT REMOVE~=&quot;ALL&quot; AND DEPLOY_MODE = &quot;terminal&quot;" Order="2" />
           <!-- During uninstall: go back to VerifyReadyDlg -->
           <Publish Event="NewDialog" Value="VerifyReadyDlg" Condition="REMOVE~=&quot;ALL&quot;" Order="3" />
@@ -244,29 +229,6 @@
       <Files Include="..\build\electron\win-unpacked\**" />
     </ComponentGroup>
 
-    <!-- Menu template bundled in install directory -->
-    <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="MenuTemplate" Guid="D4E5F6A7-B8C9-0123-DEF0-234567890ABC">
-        <File Id="MenuTemplateFile"
-              Source="..\server\src\BrewBar.API\Resources\menu-template.xlsx"
-              Name="menu-template.xlsx" />
-        <RegistryValue Root="HKLM"
-                       Key="Software\BrewBar\POS"
-                       Name="menuTemplate"
-                       Type="integer"
-                       Value="1"
-                       KeyPath="yes" />
-      </Component>
-    </DirectoryRef>
-
-    <!--
-      Optional menu import: pass MENU_FILE on command line to import a menu on first launch.
-      Example: msiexec /i BrewBar.Installer.msi MENU_FILE="C:\Users\me\my-menu.xlsx"
-      The file is copied into the API resources directory as menu-import.xlsx.
-      The Electron app detects it on first launch and imports it via the API.
-    -->
-    <Property Id="MENU_FILE" Secure="yes" />
-
     <!-- Business settings — set during install, written to JSON config for first-launch import -->
     <Property Id="STORE_NAME" Value="BrewBar" Secure="yes" />
     <Property Id="TAX_RATE_PCT" Value="15" Secure="yes" />
@@ -293,18 +255,6 @@
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
-    <!-- Browse for menu file: JScript runs PowerShell OpenFileDialog, sets MENU_FILE -->
-    <CustomAction Id="BrowseMenuFile" Script="jscript" ScriptSourceFile="BrowseMenuFile.js" Return="ignore" />
-
-    <SetProperty Id="MENU_FILE_DEST" After="CostFinalize" Value="[INSTALLFOLDER]resources\api\menu-import.xlsx" />
-
-    <CustomAction Id="CopyMenuFile"
-                  Directory="INSTALLFOLDER"
-                  ExeCommand='cmd.exe /c if not "[MENU_FILE]"=="" copy /Y "[MENU_FILE]" "[INSTALLFOLDER]resources\api\menu-import.xlsx"'
-                  Execute="deferred"
-                  Impersonate="no"
-                  Return="ignore" />
-
     <!--
       Optional: delete user data (database) on uninstall.
       Default is OFF — user must explicitly opt in via:
@@ -323,7 +273,6 @@
     <InstallExecuteSequence>
       <Custom Action="WriteDeploymentJson" After="InstallFiles" />
       <Custom Action="WriteSettingsJson" After="WriteDeploymentJson" Condition="DEPLOY_MODE = &quot;standalone&quot;" />
-      <Custom Action="CopyMenuFile" After="WriteSettingsJson" Condition="MENU_FILE AND DEPLOY_MODE = &quot;standalone&quot;" />
       <Custom Action="DeleteUserData" After="RemoveFiles" Condition="DELETE_DATA=&quot;1&quot;" />
     </InstallExecuteSequence>
 
@@ -391,7 +340,6 @@
     <Feature Id="MainApplication" Title="BrewBar POS" Description="Core application files (required)."
              Level="1" AllowAbsent="no">
       <ComponentGroupRef Id="ElectronFiles" />
-      <ComponentRef Id="MenuTemplate" />
     </Feature>
 
     <Feature Id="StartMenuShortcutFeature" Title="Start Menu Shortcut"

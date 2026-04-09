@@ -201,6 +201,92 @@ public class MenuImportApiTests : IClassFixture<TestFixture>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Import_OptionalModifierWithNegativePrice_PersistsAndExposesViaProductsApi()
+    {
+        // Regression: cocktail "Virgin Variant" modifier (optional, price -50)
+        // must round-trip through import and be exposed on the product DTO so
+        // the POS UI can offer it.
+        var client = await _f.AsAdmin();
+        using var stream = CreateTestWorkbook(wb =>
+        {
+            // Use unique names so this test doesn't pollute the shared fixture
+            // for other MenuImportApiTests that share the database.
+            var products = wb.Worksheet("Products");
+            products.Cell(2, 1).Value = "Virgin Cocktails";
+            products.Cell(2, 2).Value = "Virgin Mojito Test";
+            products.Cell(3, 1).Value = "Virgin Cocktails";
+            products.Cell(3, 2).Value = "Virgin Pina Test";
+            products.Cell(4, 1).Value = "Virgin Cocktails";
+            products.Cell(4, 2).Value = "Virgin Daiquiri Test";
+
+            wb.Worksheets.Delete("Modifiers");
+            wb.Worksheets.Delete("Product Modifiers");
+
+            var modifiers = wb.Worksheets.Add("Modifiers");
+            modifiers.Cell(1, 1).Value = "Modifier Name";
+            modifiers.Cell(1, 2).Value = "Required";
+            modifiers.Cell(1, 3).Value = "Allow Multiple";
+            modifiers.Cell(1, 4).Value = "Option Name";
+            modifiers.Cell(1, 5).Value = "Option Price";
+            modifiers.Cell(2, 1).Value = "Virgin Variant Test";
+            modifiers.Cell(2, 2).Value = "No";
+            modifiers.Cell(2, 3).Value = "No";
+            modifiers.Cell(2, 4).Value = "Make Virgin Test";
+            modifiers.Cell(2, 5).Value = -50;
+
+            var prodMods = wb.Worksheets.Add("Product Modifiers");
+            prodMods.Cell(1, 1).Value = "Product Name";
+            prodMods.Cell(1, 2).Value = "Modifier Name";
+            prodMods.Cell(2, 1).Value = "Virgin Mojito Test";
+            prodMods.Cell(2, 2).Value = "Virgin Variant Test";
+        });
+
+        var importResponse = await client.PostAsync("/api/MenuImport", CreateFormData(stream));
+        Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
+
+        var importJson = await importResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(importJson.GetProperty("modifiersCreated").GetInt32() >= 1);
+        Assert.True(importJson.GetProperty("productModifierLinksCreated").GetInt32() >= 1);
+
+        // Fetch products and locate the imported one
+        var productsResponse = await client.GetAsync("/api/products?pageSize=200");
+        Assert.Equal(HttpStatusCode.OK, productsResponse.StatusCode);
+        var productsJson = await productsResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var data = productsJson.GetProperty("data");
+
+        JsonElement? mojito = null;
+        foreach (var p in data.EnumerateArray())
+        {
+            if (p.GetProperty("name").GetString() == "Virgin Mojito Test")
+            {
+                mojito = p;
+                break;
+            }
+        }
+        Assert.NotNull(mojito);
+
+        var modifiers = mojito!.Value.GetProperty("modifiers");
+        Assert.True(modifiers.GetArrayLength() >= 1);
+
+        JsonElement? virginMod = null;
+        foreach (var m in modifiers.EnumerateArray())
+        {
+            if (m.GetProperty("modifierName").GetString() == "Virgin Variant Test")
+            {
+                virginMod = m;
+                break;
+            }
+        }
+        Assert.NotNull(virginMod);
+        Assert.False(virginMod!.Value.GetProperty("isRequired").GetBoolean());
+
+        var options = virginMod.Value.GetProperty("options");
+        Assert.Equal(1, options.GetArrayLength());
+        Assert.Equal("Make Virgin Test", options[0].GetProperty("name").GetString());
+        Assert.Equal(-50m, options[0].GetProperty("price").GetDecimal());
+    }
+
     // --- Template ---
 
     [Fact]

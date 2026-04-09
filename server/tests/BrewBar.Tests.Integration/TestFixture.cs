@@ -31,6 +31,10 @@ public class TestFixture : IAsyncLifetime
 
         // Warm up — first request triggers DB creation + seed
         await Client.GetAsync("/health/ready");
+
+        // Production seed only creates roles + admin/cashier; tests need a deterministic
+        // catalog (modifiers, categories, products) so legacy tests that hard-code IDs work.
+        await TestSeed.SeedCatalogAsync(Factory.Services);
     }
 
     public Task DisposeAsync()
@@ -67,4 +71,20 @@ public class TestFixture : IAsyncLifetime
 
     public async Task<HttpClient> AsCashier()
         => CreateAuthenticatedClient(await GetCashierToken());
+
+    public async Task<string> GetPinToken(string pin)
+    {
+        var response = await Client.PostAsJsonAsync("/api/auth/pin-login", new { pin });
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return json.GetProperty("token").GetString()!;
+    }
+
+    /// <summary>Authenticated as the seeded admin via PIN (1234) — token carries auth_method=pin.</summary>
+    public async Task<HttpClient> AsAdminViaPin()
+        => CreateAuthenticatedClient(await GetPinToken("1234"));
+
+    /// <summary>Authenticated as the seeded cashier via PIN (0000) — token carries auth_method=pin.</summary>
+    public async Task<HttpClient> AsCashierViaPin()
+        => CreateAuthenticatedClient(await GetPinToken("0000"));
 }

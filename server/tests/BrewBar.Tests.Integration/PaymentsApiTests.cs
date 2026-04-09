@@ -90,7 +90,7 @@ public class PaymentsApiTests : IClassFixture<TestFixture>
         var client = await _f.AsAdmin();
         var (orderId, total) = await CreateTestOrder(client);
 
-        await client.PostAsync($"/api/orders/{orderId}/void", null);
+        await client.PostAsJsonAsync($"/api/orders/{orderId}/void", new { reason = "test" });
 
         var response = await client.PostAsJsonAsync("/api/payments", new
         {

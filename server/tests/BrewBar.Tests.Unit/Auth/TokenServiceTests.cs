@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using BrewBar.Core.Constants;
 using BrewBar.Core.Entities.Identity;
 using BrewBar.Infrastructure.Services;
 using FluentAssertions;
@@ -38,7 +39,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test Cashier" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cashier" });
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         token.Should().NotBeNullOrWhiteSpace();
         var handler = new JwtSecurityTokenHandler();
@@ -51,7 +52,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test Cashier" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cashier" });
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.NameIdentifier && c.Value == "user-1");
@@ -65,7 +66,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = "admin@brewbar.com", DisplayName = "Admin" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Admin", "Manager" });
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         var roles = jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
@@ -79,7 +80,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Issuer.Should().Be("BrewBar-Test");
@@ -92,7 +93,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.ValidTo.Should().BeCloseTo(DateTime.UtcNow.AddDays(7), TimeSpan.FromMinutes(1));
@@ -104,10 +105,41 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", Email = null, DisplayName = "PIN-only Cashier" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
 
-        var token = await _sut.CreateToken(user);
+        var token = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
         jwt.Claims.Should().Contain(c => c.Type == ClaimTypes.Email && c.Value == string.Empty);
+    }
+
+    [Theory]
+    [InlineData(AuthClaims.AuthMethodPin)]
+    [InlineData(AuthClaims.AuthMethodPassword)]
+    public async Task CreateToken_ShouldIncludeAuthMethodClaim(string authMethod)
+    {
+        var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test" };
+        _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
+
+        var token = await _sut.CreateToken(user, authMethod);
+
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+        jwt.Claims.Should().Contain(c => c.Type == AuthClaims.AuthMethod && c.Value == authMethod);
+    }
+
+    [Fact]
+    public async Task CreateToken_PinAndPassword_ProduceDifferentClaims()
+    {
+        var user = new AppUser { Id = "user-1", Email = "test@brewbar.com", DisplayName = "Test" };
+        _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
+
+        var pinToken = await _sut.CreateToken(user, AuthClaims.AuthMethodPin);
+        var passwordToken = await _sut.CreateToken(user, AuthClaims.AuthMethodPassword);
+
+        var handler = new JwtSecurityTokenHandler();
+        var pinClaim = handler.ReadJwtToken(pinToken).Claims.First(c => c.Type == AuthClaims.AuthMethod).Value;
+        var passwordClaim = handler.ReadJwtToken(passwordToken).Claims.First(c => c.Type == AuthClaims.AuthMethod).Value;
+
+        pinClaim.Should().Be("pin");
+        passwordClaim.Should().Be("password");
     }
 
     [Fact]
@@ -121,7 +153,7 @@ public class TokenServiceTests
         var user = new AppUser { Id = "user-1", DisplayName = "Test" };
         _userManagerMock.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
 
-        var act = () => sut.CreateToken(user);
+        var act = () => sut.CreateToken(user, AuthClaims.AuthMethodPassword);
 
         act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*JWT secret*");

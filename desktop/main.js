@@ -250,42 +250,6 @@ async function tryApplySettings() {
   fs.unlinkSync(settingsFile);
 }
 
-async function tryMenuImport() {
-  const apiDir = path.dirname(getApiExePath());
-  const importFile = path.join(apiDir, 'menu-import.xlsx');
-
-  if (!fs.existsSync(importFile)) return;
-  console.log(`[Menu Import] Found ${importFile}, importing...`);
-
-  const token = await getAdminToken();
-  if (!token) { console.error('[Menu Import] Failed to get auth token'); return; }
-
-  const fileData = fs.readFileSync(importFile);
-  const boundary = '----BrewBarMenuImport' + Date.now();
-  const payload = Buffer.concat([
-    Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="menu-import.xlsx"\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n`,
-    ),
-    fileData,
-    Buffer.from(`\r\n--${boundary}--\r\n`),
-  ]);
-
-  const res = await httpRequest(`${API_URL}/api/menu-import`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      Authorization: `Bearer ${token}`,
-      'Content-Length': payload.length,
-    },
-  }, payload);
-
-  console.log(`[Menu Import] Response (${res.status}): ${res.body}`);
-  if (res.status === 200) {
-    fs.unlinkSync(importFile);
-    console.log('[Menu Import] Import complete, file removed');
-  }
-}
-
 // ─── App lifecycle ─────────────────────────────────────────────
 
 app.on('ready', async () => {
@@ -296,7 +260,6 @@ app.on('ready', async () => {
     try {
       await waitForApi();
       await tryApplySettings();
-      await tryMenuImport();
     } catch (err) {
       console.error('Failed to start local API:', err);
       app.quit();

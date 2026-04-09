@@ -119,6 +119,10 @@ public class OrdersApiTests : IClassFixture<TestFixture>
     [Fact]
     public async Task CreateOrder_CalculatesTotalsCorrectly()
     {
+        // Pricing is VAT-inclusive: unitPrice includes tax.
+        // With taxRate=0.08, a 9.00 inclusive line splits into 8.33 ex-VAT + 0.67 tax.
+        // A 4.00 inclusive line splits into 3.70 ex-VAT + 0.30 tax.
+        // Totals: subtotal=12.03, tax=0.97, total=13.00.
         var client = await _f.AsAdmin();
 
         var response = await client.PostAsJsonAsync("/api/orders", new
@@ -133,6 +137,7 @@ public class OrdersApiTests : IClassFixture<TestFixture>
                     variantName = "24 oz",
                     unitPrice = 7.50,
                     quantity = 1,
+                    taxRate = 0.08,
                     modifierItems = new[]
                     {
                         new { modifierName = "Boost", optionName = "Protein", price = 1.50 }
@@ -144,6 +149,7 @@ public class OrdersApiTests : IClassFixture<TestFixture>
                     productName = "Water",
                     unitPrice = 2.00,
                     quantity = 2,
+                    taxRate = 0.08,
                     modifierItems = Array.Empty<object>()
                 }
             }
@@ -152,9 +158,9 @@ public class OrdersApiTests : IClassFixture<TestFixture>
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal(13.00m, json.GetProperty("subtotal").GetDecimal());
-        Assert.Equal(1.04m, json.GetProperty("taxAmount").GetDecimal());
-        Assert.Equal(14.04m, json.GetProperty("total").GetDecimal());
+        Assert.Equal(12.03m, json.GetProperty("subtotal").GetDecimal());
+        Assert.Equal(0.97m, json.GetProperty("taxAmount").GetDecimal());
+        Assert.Equal(13.00m, json.GetProperty("total").GetDecimal());
         Assert.Equal(0, json.GetProperty("status").GetInt32()); // Open
     }
 
@@ -232,13 +238,13 @@ public class OrdersApiTests : IClassFixture<TestFixture>
             taxRate = 0.08,
             lineItems = new[]
             {
-                new { productId = 1, productName = "Water", unitPrice = 2.00, quantity = 1, modifierItems = Array.Empty<object>() }
+                new { productId = 1, productName = "Water", unitPrice = 2.00, quantity = 1, taxRate = 0.08, modifierItems = Array.Empty<object>() }
             }
         });
         var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
         var orderId = created.GetProperty("id").GetInt32();
 
-        var response = await client.PostAsync($"/api/orders/{orderId}/void", null);
+        var response = await client.PostAsJsonAsync($"/api/orders/{orderId}/void", new { reason = "test" });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -255,14 +261,14 @@ public class OrdersApiTests : IClassFixture<TestFixture>
             taxRate = 0.00,
             lineItems = new[]
             {
-                new { productId = 1, productName = "Water", unitPrice = 1.00, quantity = 1, modifierItems = Array.Empty<object>() }
+                new { productId = 1, productName = "Water", unitPrice = 1.00, quantity = 1, taxRate = 0.00, modifierItems = Array.Empty<object>() }
             }
         });
         var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
         var orderId = created.GetProperty("id").GetInt32();
 
-        await client.PostAsync($"/api/orders/{orderId}/void", null);
-        var response = await client.PostAsync($"/api/orders/{orderId}/void", null);
+        await client.PostAsJsonAsync($"/api/orders/{orderId}/void", new { reason = "test" });
+        var response = await client.PostAsJsonAsync($"/api/orders/{orderId}/void", new { reason = "test" });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
@@ -277,13 +283,13 @@ public class OrdersApiTests : IClassFixture<TestFixture>
             taxRate = 0.00,
             lineItems = new[]
             {
-                new { productId = 1, productName = "Water", unitPrice = 1.00, quantity = 1, modifierItems = Array.Empty<object>() }
+                new { productId = 1, productName = "Water", unitPrice = 1.00, quantity = 1, taxRate = 0.00, modifierItems = Array.Empty<object>() }
             }
         });
         var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
         var orderId = created.GetProperty("id").GetInt32();
 
-        var response = await cashier.PostAsync($"/api/orders/{orderId}/void", null);
+        var response = await cashier.PostAsJsonAsync($"/api/orders/{orderId}/void", new { reason = "test" });
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
@@ -291,7 +297,7 @@ public class OrdersApiTests : IClassFixture<TestFixture>
     public async Task VoidOrder_NonExistent_Returns404()
     {
         var client = await _f.AsAdmin();
-        var response = await client.PostAsync("/api/orders/99999/void", null);
+        var response = await client.PostAsJsonAsync("/api/orders/99999/void", new { reason = "test" });
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
