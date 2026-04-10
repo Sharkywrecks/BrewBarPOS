@@ -6,6 +6,7 @@ import {
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { routes } from './app.routes';
 import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
@@ -19,6 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptors([jwtInterceptor])),
     provideAnimationsAsync(),
+    provideNativeDateAdapter(),
     {
       provide: APP_INITIALIZER,
       useFactory: (cfg: RuntimeConfigService) => () => cfg.load(),
