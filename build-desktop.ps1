@@ -12,6 +12,7 @@
 param(
     [switch]$SkipMsi,
     [switch]$SkipElectron,
+    [switch]$UseInnoSetup,
     [string]$Version
 )
 
@@ -81,14 +82,33 @@ if (-not $SkipElectron) {
     Write-Host "[4/5] Skipping Electron packaging (--SkipElectron)" -ForegroundColor DarkGray
 }
 
-# ── Step 5: Build WiX MSI ────────────────────────────────────────────────────
+# ── Step 5: Build installer ──────────────────────────────────────────────────
 if (-not $SkipMsi) {
-    Write-Host "[5/5] Building WiX MSI (v$MsiVersion)..." -ForegroundColor Yellow
-    dotnet build "$Root\installer\BrewBar.Installer.wixproj" -c Release -p:ProductVersion=$MsiVersion
-    if ($LASTEXITCODE -ne 0) { throw "WiX build failed" }
-    Write-Host "  MSI built to build/installer/" -ForegroundColor Green
+    if ($UseInnoSetup) {
+        Write-Host "[5/5] Building Inno Setup installer (v$Version)..." -ForegroundColor Yellow
+        $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+        if (-not $iscc) {
+            # Check common install locations
+            $candidates = @(
+                "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+                "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+            )
+            foreach ($c in $candidates) {
+                if (Test-Path $c) { $iscc = Get-Item $c; break }
+            }
+        }
+        if (-not $iscc) { throw "Inno Setup compiler (ISCC.exe) not found. Install from https://jrsoftware.org/isdl.php" }
+        & $iscc.FullName "/DMyAppVersion=$Version" "$Root\installer\setup.iss"
+        if ($LASTEXITCODE -ne 0) { throw "Inno Setup build failed" }
+        Write-Host "  Installer built to build/installer/" -ForegroundColor Green
+    } else {
+        Write-Host "[5/5] Building WiX MSI (v$MsiVersion)..." -ForegroundColor Yellow
+        dotnet build "$Root\installer\BrewBar.Installer.wixproj" -c Release -p:ProductVersion=$MsiVersion
+        if ($LASTEXITCODE -ne 0) { throw "WiX build failed" }
+        Write-Host "  MSI built to build/installer/" -ForegroundColor Green
+    }
 } else {
-    Write-Host "[5/5] Skipping MSI build (--SkipMsi)" -ForegroundColor DarkGray
+    Write-Host "[5/5] Skipping installer build (--SkipMsi)" -ForegroundColor DarkGray
 }
 
 Write-Host ""

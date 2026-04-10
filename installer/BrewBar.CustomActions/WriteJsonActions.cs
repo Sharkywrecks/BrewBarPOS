@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using WixToolset.Dtf.WindowsInstaller;
 
@@ -115,6 +116,23 @@ public static class WriteJsonActions
                 string.IsNullOrWhiteSpace(pin))
             {
                 session.Log("BrewBar bootstrap: admin credentials not provided, skipping bootstrap.json");
+                return ActionResult.Success;
+            }
+
+            // Validate password matches Identity policy (IdentityServicesExtensions):
+            //   >= 8 chars, digit, lowercase, non-alphanumeric.
+            // If invalid, skip bootstrap.json so the API doesn't fail silently.
+            var pwdError = ValidatePassword(password);
+            if (pwdError != null)
+            {
+                session.Log("BrewBar bootstrap: password validation failed ({0}), skipping bootstrap.json", pwdError);
+                return ActionResult.Success;
+            }
+
+            // Validate PIN: 4-6 digits only.
+            if (pin.Length < 4 || pin.Length > 6 || !pin.All(char.IsDigit))
+            {
+                session.Log("BrewBar bootstrap: PIN validation failed (must be 4-6 digits), skipping bootstrap.json");
                 return ActionResult.Success;
             }
 
@@ -244,6 +262,20 @@ public static class WriteJsonActions
         if (string.IsNullOrEmpty(value)) return string.Empty;
         try { return Encoding.UTF8.GetString(Convert.FromBase64String(value!)); }
         catch (FormatException) { return string.Empty; }
+    }
+
+    /// <summary>
+    /// Validates password against Identity policy configured in IdentityServicesExtensions:
+    /// >= 8 chars, at least one digit, one lowercase, one non-alphanumeric.
+    /// Returns null on success, or an error description on failure.
+    /// </summary>
+    private static string? ValidatePassword(string password)
+    {
+        if (password.Length < 8) return "must be >= 8 chars";
+        if (!password.Any(char.IsDigit)) return "must contain a digit";
+        if (!password.Any(char.IsLower)) return "must contain a lowercase letter";
+        if (!password.Any(c => !char.IsLetterOrDigit(c))) return "must contain a non-alphanumeric character";
+        return null;
     }
 
     private static string JsonEscape(string s)

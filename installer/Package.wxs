@@ -147,7 +147,7 @@
                  Property="ADMIN_PIN" Password="yes" />
         <Control Id="ValidationHint" Type="Text" X="25" Y="183" Width="320" Height="12"
                  NoPrefix="yes"
-                 Text="All admin fields are required. Password &gt;= 6 chars, PIN 4-6 digits." />
+                 Text="All fields required. Password: 8+ chars, digit, lowercase, special char. PIN: 4-6 digits." />
 
         <Control Id="BottomLine" Type="Line" X="0" Y="204" Width="370" Height="0" />
 

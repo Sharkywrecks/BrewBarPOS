@@ -6,6 +6,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
 import { CLIENT_TOKEN, IClient, LoginDto } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from 'auth';
@@ -20,6 +22,8 @@ import { AuthService } from 'auth';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatIconModule,
+    MatIconButton,
   ],
   template: `
     <div class="login-container">
@@ -37,7 +41,21 @@ import { AuthService } from 'auth';
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Password</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required />
+              <input
+                matInput
+                [type]="showPassword() ? 'text' : 'password'"
+                [(ngModel)]="password"
+                name="password"
+                required
+              />
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="showPassword.set(!showPassword())"
+              >
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
 
             @if (error()) {
@@ -114,6 +132,7 @@ export class LoginPage {
   protected password = '';
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly showPassword = signal(false);
 
   constructor() {
     // First-run detection: if the API has zero users (empty staff list), the
