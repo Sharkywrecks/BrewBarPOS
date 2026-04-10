@@ -62,14 +62,23 @@ import { firstValueFrom } from 'rxjs';
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let o">
-            <button mat-icon-button (click)="onReprint(o)" matTooltip="Reprint receipt">
+            <button
+              mat-icon-button
+              (click)="onReprint(o); $event.stopPropagation()"
+              matTooltip="Reprint receipt"
+            >
               <mat-icon>print</mat-icon>
             </button>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: columns"
+          class="clickable-row"
+          (click)="onViewOrder(row)"
+        ></tr>
       </table>
     }
   `,
@@ -87,6 +96,12 @@ import { firstValueFrom } from 'rxjs';
       }
       .orders-table {
         width: 100%;
+      }
+      .clickable-row {
+        cursor: pointer;
+      }
+      .clickable-row:hover {
+        background: var(--mat-sys-surface-container);
       }
       .spinner {
         margin: 48px auto;
@@ -162,6 +177,10 @@ export class OrderHistoryPage implements OnInit {
     } catch {
       this.snackBar.open('Failed to print receipt.', 'Dismiss', { duration: 3000 });
     }
+  }
+
+  onViewOrder(order: OrderDto) {
+    this.router.navigate(['/history', order.id]);
   }
 
   onBack() {

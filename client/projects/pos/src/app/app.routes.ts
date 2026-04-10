@@ -29,6 +29,10 @@ export const routes: Routes = [
         path: 'history',
         loadComponent: () => import('./history/order-history.page').then((m) => m.OrderHistoryPage),
       },
+      {
+        path: 'history/:id',
+        loadComponent: () => import('./history/order-detail.page').then((m) => m.OrderDetailPage),
+      },
       { path: '', redirectTo: 'register', pathMatch: 'full' },
     ],
   },

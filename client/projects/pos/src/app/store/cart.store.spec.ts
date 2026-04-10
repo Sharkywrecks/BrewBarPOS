@@ -82,7 +82,7 @@ describe('CartStore', () => {
 
   it('should remove an item by localId', () => {
     store.addItem(makeItem({ localId: 'a' }));
-    store.addItem(makeItem({ localId: 'b', productName: 'Water' }));
+    store.addItem(makeItem({ localId: 'b', productId: 2, productName: 'Water' }));
     store.removeItem('a');
 
     expect(store.lineItems()).toHaveLength(1);
@@ -94,6 +94,33 @@ describe('CartStore', () => {
     store.updateItemQuantity('a', 5);
 
     expect(store.lineItems()[0].quantity).toBe(5);
+  });
+
+  it('should stack identical items by incrementing quantity', () => {
+    store.addItem(makeItem({ localId: 'a' }));
+    store.addItem(makeItem({ localId: 'b' }));
+
+    expect(store.lineItems()).toHaveLength(1);
+    expect(store.lineItems()[0].quantity).toBe(2);
+  });
+
+  it('should not stack items with different modifiers', () => {
+    store.addItem(makeItem({ localId: 'a', modifierItems: [] }));
+    store.addItem(
+      makeItem({
+        localId: 'b',
+        modifierItems: [{ modifierName: 'Add-In', optionName: 'Protein', price: 1.5 }],
+      }),
+    );
+
+    expect(store.lineItems()).toHaveLength(2);
+  });
+
+  it('should not stack items with different variants', () => {
+    store.addItem(makeItem({ localId: 'a', variantName: '16 oz' }));
+    store.addItem(makeItem({ localId: 'b', variantName: '24 oz' }));
+
+    expect(store.lineItems()).toHaveLength(2);
   });
 
   it('should remove item when quantity set to 0', () => {

@@ -117,10 +117,30 @@ export class CartStore {
   readonly total = computed(() => this.orderNetInclusive());
 
   addItem(item: CartLineItem): void {
-    this.state.update((s) => ({
-      ...s,
-      lineItems: [...s.lineItems, item],
-    }));
+    this.state.update((s) => {
+      const existing = s.lineItems.find(
+        (li) =>
+          li.productId === item.productId &&
+          li.variantName === item.variantName &&
+          li.modifierItems.length === item.modifierItems.length &&
+          li.modifierItems.every(
+            (m, i) =>
+              m.modifierName === item.modifierItems[i]?.modifierName &&
+              m.optionName === item.modifierItems[i]?.optionName,
+          ),
+      );
+
+      if (existing) {
+        return {
+          ...s,
+          lineItems: s.lineItems.map((li) =>
+            li.localId === existing.localId ? { ...li, quantity: li.quantity + item.quantity } : li,
+          ),
+        };
+      }
+
+      return { ...s, lineItems: [...s.lineItems, item] };
+    });
   }
 
   updateItemQuantity(localId: string, quantity: number): void {
