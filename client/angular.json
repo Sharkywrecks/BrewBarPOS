@@ -144,7 +144,8 @@
                 "scripts": true,
                 "styles": { "minify": true, "inlineCritical": false },
                 "fonts": true
-              }
+              },
+              "serviceWorker": "projects/pos/ngsw-config.json"
             },
             "development": {
               "optimization": false,

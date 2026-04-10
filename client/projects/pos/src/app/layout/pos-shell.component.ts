@@ -9,7 +9,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { extractApiError } from 'api-client';
 import { AuthService } from 'auth';
 import { PrinterService } from 'printing';
-import { OutboxService, SyncEngineService } from 'sync';
+import { OutboxService, SyncEngineService, ConnectivityService } from 'sync';
 import { ShiftService } from '../services/shift.service';
 import { OpenShiftDialogComponent } from '../register/open-shift-dialog.component';
 import {
@@ -34,6 +34,13 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
   template: `
     <mat-toolbar color="primary" class="pos-toolbar">
       <span class="brand">BrewBar</span>
+      @if (!connectivity.isOnline()) {
+        <mat-icon
+          class="offline-indicator"
+          matTooltip="Offline — orders will sync when connection is restored"
+          >cloud_off</mat-icon
+        >
+      }
       <span class="spacer"></span>
       @if (shift.currentShift()) {
         <button mat-icon-button matTooltip="Cash Drop" (click)="onCashDrop()">
@@ -134,6 +141,10 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
         color: #ff9800;
         animation: spin 1.5s linear infinite;
       }
+      .offline-indicator {
+        color: #f44336;
+        margin-left: 8px;
+      }
       @keyframes spin {
         100% {
           transform: rotate(360deg);
@@ -147,6 +158,7 @@ export class PosShellComponent {
   protected readonly printer = inject(PrinterService);
   protected readonly outbox = inject(OutboxService);
   protected readonly syncEngine = inject(SyncEngineService);
+  protected readonly connectivity = inject(ConnectivityService);
   protected readonly shift = inject(ShiftService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);

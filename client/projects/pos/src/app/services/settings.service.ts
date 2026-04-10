@@ -1,6 +1,7 @@
 import { Injectable, Inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CLIENT_TOKEN, IClient, BusinessSettingsDto, Currency } from 'api-client';
+import { getCurrencySymbol } from 'shared-models';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -36,13 +37,6 @@ export class SettingsService {
 
   /** Currency symbol string for receipt printing */
   get currencySymbol(): string {
-    const SYMBOLS: Record<Currency, string> = {
-      [Currency.SCR]: 'SCR ',
-      [Currency.USD]: '$ ',
-      [Currency.EUR]: '€ ',
-      [Currency.GBP]: '£ ',
-      [Currency.AED]: 'AED ',
-    };
-    return SYMBOLS[this.settings().currency ?? Currency.SCR] ?? 'SCR ';
+    return getCurrencySymbol(this.settings().currency);
   }
 }

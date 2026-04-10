@@ -5,7 +5,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-import { AppCurrencyPipe } from '../services/app-currency.pipe';
+import { AppCurrencyPipe } from 'ui';
 import { DiscountType } from 'api-client';
 
 export interface DiscountDialogData {

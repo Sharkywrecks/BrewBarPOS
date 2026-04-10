@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
-import { AppCurrencyPipe } from '../services/app-currency.pipe';
+import { AppCurrencyPipe } from 'ui';
 import { FormsModule } from '@angular/forms';
 import { ProductDto, ProductVariantDto, ProductModifierDto, ModifierOptionDto } from 'api-client';
 import { CartLineItem, CartModifierItem } from '../store/cart.models';

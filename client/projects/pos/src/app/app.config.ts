@@ -3,6 +3,7 @@ import {
   APP_INITIALIZER,
   ErrorHandler,
   provideBrowserGlobalErrorListeners,
+  isDevMode,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -16,6 +17,8 @@ import { environment } from '../environments/environment';
 import { SettingsService } from './services/settings.service';
 import { SyncEngineService, OutboxService } from 'sync';
 import { GlobalErrorHandler } from './services/global-error-handler';
+import { provideServiceWorker } from '@angular/service-worker';
+import { CURRENCY_PROVIDER } from 'ui';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -27,6 +30,7 @@ export const appConfig: ApplicationConfig = {
     { provide: CLIENT_TOKEN, useClass: Client },
     { provide: PRINT_API_CLIENT, useExisting: CLIENT_TOKEN },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
+    { provide: CURRENCY_PROVIDER, useExisting: SettingsService },
     {
       provide: APP_INITIALIZER,
       useFactory:
@@ -39,5 +43,9 @@ export const appConfig: ApplicationConfig = {
       deps: [SettingsService, SyncEngineService, OutboxService],
       multi: true,
     },
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };

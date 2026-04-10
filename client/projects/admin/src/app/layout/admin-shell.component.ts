@@ -49,6 +49,10 @@ import { AuthService } from 'auth';
             <mat-icon matListItemIcon>group</mat-icon>
             <span matListItemTitle>Staff</span>
           </a>
+          <a mat-list-item routerLink="/terminals" routerLinkActive="active">
+            <mat-icon matListItemIcon>point_of_sale</mat-icon>
+            <span matListItemTitle>Terminals</span>
+          </a>
         </mat-nav-list>
       </mat-sidenav>
 

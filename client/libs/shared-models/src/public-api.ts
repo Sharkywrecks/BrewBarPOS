@@ -1,1 +1,1 @@
-export { SharedModels } from './lib/shared-models';
+export { CURRENCY_SYMBOLS, getCurrencySymbol } from './lib/currency';

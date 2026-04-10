@@ -29,6 +29,7 @@ public class BrewBarContext : DbContext
     public DbSet<RegisterShift> RegisterShifts => Set<RegisterShift>();
     public DbSet<CashDrop> CashDrops => Set<CashDrop>();
     public DbSet<SyncOutboxEntry> SyncOutboxEntries => Set<SyncOutboxEntry>();
+    public DbSet<SyncConflictLog> SyncConflictLogs => Set<SyncConflictLog>();
     public DbSet<BusinessSettings> BusinessSettings => Set<BusinessSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

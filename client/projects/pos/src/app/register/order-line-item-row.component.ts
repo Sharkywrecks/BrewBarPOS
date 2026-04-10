@@ -1,7 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { AppCurrencyPipe } from '../services/app-currency.pipe';
+import { AppCurrencyPipe } from 'ui';
 import { CartLineItem } from '../store/cart.models';
 
 @Component({

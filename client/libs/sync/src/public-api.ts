@@ -3,3 +3,4 @@ export type { PendingOrder, SavedCart } from './lib/db';
 export { OutboxService } from './lib/outbox.service';
 export { SyncEngineService } from './lib/sync-engine.service';
 export { CartPersistenceService } from './lib/cart-persistence.service';
+export { ConnectivityService } from './lib/connectivity.service';

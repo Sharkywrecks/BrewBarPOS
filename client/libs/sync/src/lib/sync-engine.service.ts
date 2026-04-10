@@ -2,6 +2,7 @@ import { Injectable, Inject, OnDestroy } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { CLIENT_TOKEN, IClient, CreateOrderDto, CreatePaymentDto } from 'api-client';
 import { OutboxService } from './outbox.service';
+import { ConnectivityService } from './connectivity.service';
 
 const SYNC_INTERVAL_MS = 10_000; // Check every 10 seconds
 
@@ -13,11 +14,13 @@ export class SyncEngineService implements OnDestroy {
   constructor(
     @Inject(CLIENT_TOKEN) private readonly client: IClient,
     private readonly outbox: OutboxService,
+    private readonly connectivity: ConnectivityService,
   ) {}
 
-  /** Start the background sync loop. Call once at app startup. */
+  /** Start the background sync loop and connectivity heartbeat. Call once at app startup. */
   start(): void {
     if (this.intervalId) return;
+    this.connectivity.start();
     this.intervalId = setInterval(() => this.processOutbox(), SYNC_INTERVAL_MS);
     // Run immediately on start
     this.processOutbox();
@@ -28,15 +31,17 @@ export class SyncEngineService implements OnDestroy {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    this.connectivity.stop();
   }
 
   ngOnDestroy(): void {
     this.stop();
   }
 
-  /** Process all pending outbox entries. */
+  /** Process all pending outbox entries. Skips if offline. */
   async processOutbox(): Promise<void> {
     if (this.running) return;
+    if (!this.connectivity.isOnline()) return;
     this.running = true;
 
     try {

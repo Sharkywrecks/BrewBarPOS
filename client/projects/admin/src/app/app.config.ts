@@ -13,6 +13,7 @@ import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
 import { RuntimeConfigService } from './services/runtime-config.service';
 import { SettingsService } from './services/settings.service';
+import { CURRENCY_PROVIDER } from 'ui';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -33,6 +34,7 @@ export const appConfig: ApplicationConfig = {
       deps: [RuntimeConfigService],
     },
     { provide: CLIENT_TOKEN, useClass: Client },
+    { provide: CURRENCY_PROVIDER, useExisting: SettingsService },
     {
       provide: APP_INITIALIZER,
       useFactory: (settings: SettingsService) => () => settings.load(),

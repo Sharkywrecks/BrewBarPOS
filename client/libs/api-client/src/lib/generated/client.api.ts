@@ -368,6 +368,58 @@ export interface IClient {
     from?: Date | undefined,
     to?: Date | undefined,
   ): Observable<RegisterShiftDto[]>;
+  /**
+   * @param status (optional)
+   * @return OK
+   */
+  sync_GetOutboxEntries(status?: SyncStatus | undefined): Observable<SyncOutboxEntryDto[]>;
+  /**
+   * @return OK
+   */
+  sync_RetryOutboxEntry(id: number): Observable<void>;
+  /**
+   * @return OK
+   */
+  sync_DiscardOutboxEntry(id: number): Observable<void>;
+  /**
+   * @param resolved (optional)
+   * @return OK
+   */
+  sync_GetConflicts(resolved?: boolean | undefined): Observable<SyncConflictLogDto[]>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  sync_ResolveConflict(id: number, body?: ResolveConflictDto | undefined): Observable<void>;
+  /**
+   * @return OK
+   */
+  terminals_GetTerminals(): Observable<TerminalDto[]>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  terminals_CreateTerminal(body?: CreateTerminalDto | undefined): Observable<TerminalDto>;
+  /**
+   * @return OK
+   */
+  terminals_GetTerminal(id: number): Observable<TerminalDto>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  terminals_UpdateTerminal(
+    id: number,
+    body?: UpdateTerminalDto | undefined,
+  ): Observable<TerminalDto>;
+  /**
+   * @return OK
+   */
+  terminals_DeleteTerminal(id: number): Observable<void>;
+  /**
+   * @return OK
+   */
+  terminals_Heartbeat(id: number): Observable<void>;
 }
 
 @Injectable()
@@ -1904,6 +1956,7 @@ export class Client implements IClient {
 
   protected processMenuImport_Export(response: HttpResponseBase): Observable<FileResponse> {
     const status = response.status;
+
     const responseBlob =
       response instanceof HttpResponse
         ? response.body
@@ -1994,6 +2047,7 @@ export class Client implements IClient {
 
   protected processMenuImport_GetTemplate(response: HttpResponseBase): Observable<FileResponse> {
     const status = response.status;
+
     const responseBlob =
       response instanceof HttpResponse
         ? response.body
@@ -6104,6 +6158,933 @@ export class Client implements IClient {
     }
     return _observableOf(null as any);
   }
+
+  /**
+   * @param status (optional)
+   * @return OK
+   */
+  sync_GetOutboxEntries(status?: SyncStatus | undefined): Observable<SyncOutboxEntryDto[]> {
+    let url_ = this.baseUrl + '/api/Sync/outbox?';
+    if (status === null) throw new Error("The parameter 'status' cannot be null.");
+    else if (status !== undefined) url_ += 'status=' + encodeURIComponent('' + status) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSync_GetOutboxEntries(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSync_GetOutboxEntries(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<SyncOutboxEntryDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<SyncOutboxEntryDto[]>;
+        }),
+      );
+  }
+
+  protected processSync_GetOutboxEntries(
+    response: HttpResponseBase,
+  ): Observable<SyncOutboxEntryDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as SyncOutboxEntryDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as SyncOutboxEntryDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  sync_RetryOutboxEntry(id: number): Observable<void> {
+    let url_ = this.baseUrl + '/api/Sync/outbox/{id}/retry';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({}),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSync_RetryOutboxEntry(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSync_RetryOutboxEntry(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processSync_RetryOutboxEntry(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  sync_DiscardOutboxEntry(id: number): Observable<void> {
+    let url_ = this.baseUrl + '/api/Sync/outbox/{id}/discard';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({}),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSync_DiscardOutboxEntry(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSync_DiscardOutboxEntry(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processSync_DiscardOutboxEntry(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param resolved (optional)
+   * @return OK
+   */
+  sync_GetConflicts(resolved?: boolean | undefined): Observable<SyncConflictLogDto[]> {
+    let url_ = this.baseUrl + '/api/Sync/conflicts?';
+    if (resolved === null) throw new Error("The parameter 'resolved' cannot be null.");
+    else if (resolved !== undefined) url_ += 'resolved=' + encodeURIComponent('' + resolved) + '&';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSync_GetConflicts(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSync_GetConflicts(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<SyncConflictLogDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<SyncConflictLogDto[]>;
+        }),
+      );
+  }
+
+  protected processSync_GetConflicts(response: HttpResponseBase): Observable<SyncConflictLogDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as SyncConflictLogDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as SyncConflictLogDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  sync_ResolveConflict(id: number, body?: ResolveConflictDto | undefined): Observable<void> {
+    let url_ = this.baseUrl + '/api/Sync/conflicts/{id}/resolve';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processSync_ResolveConflict(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processSync_ResolveConflict(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processSync_ResolveConflict(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  terminals_GetTerminals(): Observable<TerminalDto[]> {
+    let url_ = this.baseUrl + '/api/Terminals';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_GetTerminals(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_GetTerminals(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<TerminalDto[]>;
+            }
+          } else return _observableThrow(response_) as any as Observable<TerminalDto[]>;
+        }),
+      );
+  }
+
+  protected processTerminals_GetTerminals(response: HttpResponseBase): Observable<TerminalDto[]> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as TerminalDto[]);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as TerminalDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  terminals_CreateTerminal(body?: CreateTerminalDto | undefined): Observable<TerminalDto> {
+    let url_ = this.baseUrl + '/api/Terminals';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_CreateTerminal(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_CreateTerminal(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<TerminalDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<TerminalDto>;
+        }),
+      );
+  }
+
+  protected processTerminals_CreateTerminal(response: HttpResponseBase): Observable<TerminalDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as TerminalDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as TerminalDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  terminals_GetTerminal(id: number): Observable<TerminalDto> {
+    let url_ = this.baseUrl + '/api/Terminals/{id}';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_GetTerminal(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_GetTerminal(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<TerminalDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<TerminalDto>;
+        }),
+      );
+  }
+
+  protected processTerminals_GetTerminal(response: HttpResponseBase): Observable<TerminalDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as TerminalDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as TerminalDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  terminals_UpdateTerminal(
+    id: number,
+    body?: UpdateTerminalDto | undefined,
+  ): Observable<TerminalDto> {
+    let url_ = this.baseUrl + '/api/Terminals/{id}';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('put', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_UpdateTerminal(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_UpdateTerminal(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<TerminalDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<TerminalDto>;
+        }),
+      );
+  }
+
+  protected processTerminals_UpdateTerminal(response: HttpResponseBase): Observable<TerminalDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as TerminalDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as TerminalDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  terminals_DeleteTerminal(id: number): Observable<void> {
+    let url_ = this.baseUrl + '/api/Terminals/{id}';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({}),
+    };
+
+    return this.http
+      .request('delete', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_DeleteTerminal(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_DeleteTerminal(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processTerminals_DeleteTerminal(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  terminals_Heartbeat(id: number): Observable<void> {
+    let url_ = this.baseUrl + '/api/Terminals/{id}/heartbeat';
+    if (id === undefined || id === null) throw new Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({}),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processTerminals_Heartbeat(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processTerminals_Heartbeat(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<void>;
+            }
+          } else return _observableThrow(response_) as any as Observable<void>;
+        }),
+      );
+  }
+
+  protected processTerminals_Heartbeat(response: HttpResponseBase): Observable<void> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as void);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return _observableOf(null as any);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
 }
 
 export interface BusinessSettingsDto {
@@ -6244,6 +7225,10 @@ export interface CreateRefundDto {
 export interface CreateRefundLineItemDto {
   orderLineItemId?: number;
   quantity?: number;
+}
+
+export interface CreateTerminalDto {
+  name?: string | null;
 }
 
 export enum Currency {
@@ -6557,6 +7542,10 @@ export interface ResetPinDto {
   pin: string;
 }
 
+export interface ResolveConflictDto {
+  resolution?: string | null;
+}
+
 export interface SalesRangeReportDto {
   from?: Date;
   to?: Date;
@@ -6595,6 +7584,47 @@ export enum ShiftStatus {
 export interface StaffDto {
   id?: string | null;
   displayName?: string | null;
+}
+
+export interface SyncConflictLogDto {
+  id?: number;
+  localId?: string;
+  entityType?: string | null;
+  clientPayload?: string | null;
+  serverPayload?: string | null;
+  conflictReason?: string | null;
+  resolved?: boolean;
+  resolvedByUserId?: string | null;
+  resolvedAtUtc?: Date | null;
+  createdAtUtc?: Date;
+}
+
+export interface SyncOutboxEntryDto {
+  id?: number;
+  localId?: string;
+  entityType?: string | null;
+  payload?: string | null;
+  status?: SyncStatus;
+  attemptCount?: number;
+  lastAttemptUtc?: Date | null;
+  errorMessage?: string | null;
+  createdAtUtc?: Date;
+}
+
+export enum SyncStatus {
+  Pending = 'Pending',
+  Sent = 'Sent',
+  Failed = 'Failed',
+  DeadLetter = 'DeadLetter',
+}
+
+export interface TerminalDto {
+  id?: number;
+  name?: string | null;
+  registrationCode?: string | null;
+  isActive?: boolean;
+  lastSeenUtc?: Date | null;
+  configJson?: string | null;
 }
 
 export interface UpdateBusinessSettingsDto {
@@ -6643,6 +7673,12 @@ export interface UpdateProductVariantDto {
   priceOverride?: number;
   sortOrder?: number;
   isAvailable?: boolean;
+}
+
+export interface UpdateTerminalDto {
+  name?: string | null;
+  isActive?: boolean;
+  configJson?: string | null;
 }
 
 export interface UpdateUserDto {

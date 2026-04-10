@@ -1,7 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatRippleModule } from '@angular/material/core';
-import { AppCurrencyPipe } from '../services/app-currency.pipe';
+import { AppCurrencyPipe } from 'ui';
 import { ProductDto } from 'api-client';
 
 @Component({
