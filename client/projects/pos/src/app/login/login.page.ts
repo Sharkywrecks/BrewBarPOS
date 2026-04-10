@@ -96,8 +96,13 @@ import { PinPadComponent } from './pin-pad.component';
         color: var(--mat-sys-primary);
       }
       mat-card-header {
-        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         margin-bottom: 28px;
+      }
+      ::ng-deep .mat-mdc-card-header-text {
+        text-align: center;
       }
       mat-card-content {
         display: flex;

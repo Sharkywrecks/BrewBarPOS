@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { API_BASE_URL } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 
@@ -59,14 +60,74 @@ interface PaymentSummary {
     MatProgressSpinnerModule,
     MatTableModule,
     MatProgressBarModule,
+    MatDatepickerModule,
   ],
   template: `
     <div class="header">
       <h1>Reports</h1>
-      <mat-form-field appearance="outline">
-        <mat-label>Date</mat-label>
-        <input matInput type="date" [(ngModel)]="reportDate" (change)="loadAll()" />
-      </mat-form-field>
+      <div class="header-controls">
+        <div class="date-presets">
+          <button
+            mat-stroked-button
+            (click)="setPreset('today')"
+            [class.active]="activePreset === 'today'"
+          >
+            Today
+          </button>
+          <button
+            mat-stroked-button
+            (click)="setPreset('yesterday')"
+            [class.active]="activePreset === 'yesterday'"
+          >
+            Yesterday
+          </button>
+          <button
+            mat-stroked-button
+            (click)="setPreset('last7')"
+            [class.active]="activePreset === 'last7'"
+          >
+            Last 7 days
+          </button>
+          <button
+            mat-stroked-button
+            (click)="setPreset('last30')"
+            [class.active]="activePreset === 'last30'"
+          >
+            Last 30 days
+          </button>
+          <button
+            mat-stroked-button
+            (click)="setPreset('thisMonth')"
+            [class.active]="activePreset === 'thisMonth'"
+          >
+            This month
+          </button>
+        </div>
+        <div class="date-range">
+          <mat-form-field appearance="outline">
+            <mat-label>From</mat-label>
+            <input
+              matInput
+              [matDatepicker]="fromPicker"
+              [(ngModel)]="fromDate"
+              (dateChange)="onDateChange()"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+            <mat-datepicker #fromPicker></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>To</mat-label>
+            <input
+              matInput
+              [matDatepicker]="toPicker"
+              [(ngModel)]="toDate"
+              (dateChange)="onDateChange()"
+            />
+            <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+            <mat-datepicker #toPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+      </div>
     </div>
 
     @if (loading()) {
@@ -208,12 +269,31 @@ interface PaymentSummary {
   styles: [
     `
       .header {
+        margin-bottom: 16px;
+      }
+      .header-controls {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
       }
-      .header mat-form-field {
+      .date-presets {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .date-presets button.active {
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+      }
+      .date-range {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .date-range mat-form-field {
         width: 180px;
       }
       .kpi-grid {
@@ -321,31 +401,85 @@ export class ReportsPage implements OnInit {
   readonly paymentSummary = signal<PaymentSummary | null>(null);
   readonly loading = signal(false);
 
-  reportDate = new Date().toISOString().split('T')[0];
+  fromDate: Date | null = null;
+  toDate: Date | null = null;
+  activePreset: string | null = null;
   readonly productColumns = ['rank', 'name', 'category', 'units', 'revenue'];
 
   private maxHourlyTotal = 1;
 
   async ngOnInit() {
-    await this.loadAll();
+    this.setPreset('today');
+  }
+
+  setPreset(preset: string) {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    this.activePreset = preset;
+    switch (preset) {
+      case 'today':
+        this.fromDate = startOfToday;
+        this.toDate = startOfToday;
+        break;
+      case 'yesterday': {
+        const yesterday = new Date(startOfToday);
+        yesterday.setDate(yesterday.getDate() - 1);
+        this.fromDate = yesterday;
+        this.toDate = yesterday;
+        break;
+      }
+      case 'last7': {
+        const d = new Date(startOfToday);
+        d.setDate(d.getDate() - 6);
+        this.fromDate = d;
+        this.toDate = startOfToday;
+        break;
+      }
+      case 'last30': {
+        const d = new Date(startOfToday);
+        d.setDate(d.getDate() - 29);
+        this.fromDate = d;
+        this.toDate = startOfToday;
+        break;
+      }
+      case 'thisMonth':
+        this.fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        this.toDate = startOfToday;
+        break;
+    }
+    this.loadAll();
+  }
+
+  onDateChange() {
+    this.activePreset = null;
+    if (this.fromDate) {
+      this.loadAll();
+    }
+  }
+
+  private formatDate(d: Date): string {
+    return d.toISOString().split('T')[0];
   }
 
   async loadAll() {
+    if (!this.fromDate) return;
     this.loading.set(true);
     try {
-      const date = this.reportDate;
+      const from = this.formatDate(this.fromDate);
+      const to = this.toDate ? this.formatDate(this.toDate) : from;
       const [daily, products, payments] = await Promise.all([
         firstValueFrom(
-          this.http.get<DailyReport>(`${this.baseUrl}/api/reports/daily?date=${date}`),
+          this.http.get<DailyReport>(`${this.baseUrl}/api/reports/daily?date=${from}`),
         ),
         firstValueFrom(
           this.http.get<ProductPerf[]>(
-            `${this.baseUrl}/api/reports/products?from=${date}&to=${date}&limit=10`,
+            `${this.baseUrl}/api/reports/products?from=${from}&to=${to}&limit=10`,
           ),
         ),
         firstValueFrom(
           this.http.get<PaymentSummary>(
-            `${this.baseUrl}/api/reports/payments?from=${date}&to=${date}`,
+            `${this.baseUrl}/api/reports/payments?from=${from}&to=${to}`,
           ),
         ),
       ]);
