@@ -207,6 +207,15 @@ export interface IClient {
    */
   payments_GetRefundsByOrder(orderId: number): Observable<RefundDto[]>;
   /**
+   * @param body (optional)
+   * @return OK
+   */
+  print_Print(body?: PrintRequestDto | undefined): Observable<PrintResultDto>;
+  /**
+   * @return OK
+   */
+  print_GetStatus(): Observable<PrinterStatusDto>;
+  /**
    * @param categoryId (optional)
    * @param availableOnly (optional)
    * @param pageIndex (optional)
@@ -1895,11 +1904,6 @@ export class Client implements IClient {
 
   protected processMenuImport_Export(response: HttpResponseBase): Observable<FileResponse> {
     const status = response.status;
-    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
-    if (response instanceof HttpResponse && response.body !== undefined) {
-      return _observableOf(response.body as FileResponse);
-    }
-
     const responseBlob =
       response instanceof HttpResponse
         ? response.body
@@ -1990,11 +1994,6 @@ export class Client implements IClient {
 
   protected processMenuImport_GetTemplate(response: HttpResponseBase): Observable<FileResponse> {
     const status = response.status;
-    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
-    if (response instanceof HttpResponse && response.body !== undefined) {
-      return _observableOf(response.body as FileResponse);
-    }
-
     const responseBlob =
       response instanceof HttpResponse
         ? response.body
@@ -3682,6 +3681,183 @@ export class Client implements IClient {
           } else {
             try {
               result200 = JSON.parse(_responseText, this.jsonParseReviver) as RefundDto[];
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  print_Print(body?: PrintRequestDto | undefined): Observable<PrintResultDto> {
+    let url_ = this.baseUrl + '/api/Print';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPrint_Print(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPrint_Print(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PrintResultDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PrintResultDto>;
+        }),
+      );
+  }
+
+  protected processPrint_Print(response: HttpResponseBase): Observable<PrintResultDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PrintResultDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PrintResultDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @return OK
+   */
+  print_GetStatus(): Observable<PrinterStatusDto> {
+    let url_ = this.baseUrl + '/api/Print/status';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPrint_GetStatus(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPrint_GetStatus(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PrinterStatusDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PrinterStatusDto>;
+        }),
+      );
+  }
+
+  protected processPrint_GetStatus(response: HttpResponseBase): Observable<PrinterStatusDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PrinterStatusDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PrinterStatusDto;
             } catch (e) {
               throw new Error('Failed to parse JSON response: ' + _responseText);
             }
@@ -6269,6 +6445,18 @@ export interface PaymentSummaryReportDto {
 export interface PinLoginDto {
   userId: string;
   pin: string;
+}
+
+export interface PrintRequestDto {
+  data: string | null;
+}
+
+export interface PrintResultDto {
+  success?: boolean;
+}
+
+export interface PrinterStatusDto {
+  available?: boolean;
 }
 
 export interface ProblemDetails {

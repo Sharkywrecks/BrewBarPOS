@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { extractApiError } from 'api-client';
 import { AuthService } from 'auth';
 import { PrinterService } from 'printing';
 import { OutboxService, SyncEngineService } from 'sync';
@@ -174,8 +175,10 @@ export class PosShellComponent {
       try {
         await this.shift.closeShift(shiftId, result.closingCashAmount, result.notes ?? undefined);
         this.snackBar.open('Shift closed.', 'OK', { duration: 3000 });
-      } catch {
-        this.snackBar.open('Failed to close shift.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to close shift.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -189,8 +192,10 @@ export class PosShellComponent {
       try {
         await this.shift.addCashDrop(shiftId, result.amount, result.reason ?? undefined);
         this.snackBar.open('Cash drop recorded.', 'OK', { duration: 3000 });
-      } catch {
-        this.snackBar.open('Failed to record cash drop.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to record cash drop.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }

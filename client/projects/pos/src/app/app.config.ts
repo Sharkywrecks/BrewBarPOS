@@ -11,6 +11,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { routes } from './app.routes';
 import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
+import { PRINT_API_CLIENT } from 'printing';
 import { environment } from '../environments/environment';
 import { SettingsService } from './services/settings.service';
 import { SyncEngineService, OutboxService } from 'sync';
@@ -24,6 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     { provide: API_BASE_URL, useValue: environment.apiUrl },
     { provide: CLIENT_TOKEN, useClass: Client },
+    { provide: PRINT_API_CLIENT, useExisting: CLIENT_TOKEN },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: APP_INITIALIZER,

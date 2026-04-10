@@ -10,7 +10,7 @@
 ; Version is passed via /DMyAppVersion=x.y.z on the ISCC command line.
 ; Falls back to 1.0.0 for local dev builds.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.1.0"
 #endif
 
 [Setup]
@@ -81,6 +81,8 @@ var
   AdminEmailEdit: TNewEdit;
   AdminPasswordEdit: TPasswordEdit;
   AdminPinEdit: TPasswordEdit;
+
+  ShowCredentialsCheckbox: TNewCheckBox;
 
   DataOptionsPage: TWizardPage;
   DeleteDataCheckbox: TNewCheckBox;
@@ -169,6 +171,28 @@ begin
   Lbl.Left := 0;
   Lbl.Caption := 'e.g. https://pos-api.yourdomain.com or http://192.168.1.100:5000';
   Lbl.Font.Size := 7;
+end;
+
+// ─── Toggle password/PIN visibility ───────────────────────────────────────
+procedure ShowCredentialsClick(Sender: TObject);
+var
+  PwdChar: Longint;
+  TmpPwd, TmpPin: string;
+begin
+  if ShowCredentialsCheckbox.Checked then
+    PwdChar := 0
+  else
+    PwdChar := Ord('*');
+  // EM_SETPASSWORDCHAR = $00CC
+  SendMessage(AdminPasswordEdit.Handle, $00CC, PwdChar, 0);
+  SendMessage(AdminPinEdit.Handle, $00CC, PwdChar, 0);
+  // Force redraw by resetting text
+  TmpPwd := AdminPasswordEdit.Text;
+  AdminPasswordEdit.Text := '';
+  AdminPasswordEdit.Text := TmpPwd;
+  TmpPin := AdminPinEdit.Text;
+  AdminPinEdit.Text := '';
+  AdminPinEdit.Text := TmpPin;
 end;
 
 // ─── Business Setup page (standalone only) ─────────────────────────────────
@@ -283,6 +307,15 @@ begin
   AdminPinEdit.Left := 120;
   AdminPinEdit.Width := 80;
   Y := Y + 28;
+
+  ShowCredentialsCheckbox := TNewCheckBox.Create(BusinessPage);
+  ShowCredentialsCheckbox.Parent := BusinessPage.Surface;
+  ShowCredentialsCheckbox.Top := Y;
+  ShowCredentialsCheckbox.Left := 0;
+  ShowCredentialsCheckbox.Width := 200;
+  ShowCredentialsCheckbox.Caption := 'Show password and PIN';
+  ShowCredentialsCheckbox.OnClick := @ShowCredentialsClick;
+  Y := Y + 24;
 
   Lbl := TNewStaticText.Create(BusinessPage);
   Lbl.Parent := BusinessPage.Surface;

@@ -109,10 +109,12 @@
     protected process{{ operation.ActualOperationNameUpper }}(response: {% if Framework.Angular.UseHttpClient %}HttpResponseBase{% else %}Response{% endif %}): Observable<{{ operation.ResultType }}> {
         const status = response.status;
 {%- if Framework.Angular.UseHttpClient -%}
+{%-   unless operation.IsFile -%}
         // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
         if (response instanceof HttpResponse && response.body !== undefined) {
             return {{ Framework.RxJs.ObservableOfMethod }}(response.body as {{ operation.ResultType }});
         }
+{%-   endunless -%}
 
         const responseBlob =
             response instanceof HttpResponse ? response.body :

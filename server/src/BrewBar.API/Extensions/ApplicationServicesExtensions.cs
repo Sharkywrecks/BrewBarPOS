@@ -78,6 +78,8 @@ public static class ApplicationServicesExtensions
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddSingleton<IWindowsRawPrinter, WindowsRawPrintHelper>();
+        services.AddSingleton<IRawPrinterService, RawPrinterService>();
 
         services.AddCors(opt =>
         {

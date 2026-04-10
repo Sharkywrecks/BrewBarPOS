@@ -122,7 +122,8 @@
                 "input": "projects/pos/public"
               }
             ],
-            "styles": ["projects/pos/src/styles.scss"]
+            "styles": ["projects/pos/src/styles.scss"],
+            "allowedCommonJsDependencies": ["simple-keyboard"]
           },
           "configurations": {
             "production": {

@@ -1,12 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { CLIENT_TOKEN, FileResponse, IClient, MenuImportResult } from 'api-client';
+import { CLIENT_TOKEN, FileResponse, IClient, MenuImportResult, extractApiError } from 'api-client';
 
 @Component({
   selector: 'app-menu-import',
@@ -211,8 +210,10 @@ export class MenuImportPage {
       const file = await firstValueFrom(this.client.menuImport_Export());
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       this.saveFile(file, `menu-export-${stamp}.xlsx`);
-    } catch {
-      this.snackBar.open('Failed to export catalog', 'Dismiss', { duration: 4000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to export catalog'), 'Dismiss', {
+        duration: 4000,
+      });
     } finally {
       this.exporting.set(false);
     }
@@ -222,8 +223,10 @@ export class MenuImportPage {
     try {
       const file = await firstValueFrom(this.client.menuImport_GetTemplate());
       this.saveFile(file, 'menu-template.xlsx');
-    } catch {
-      this.snackBar.open('Failed to download template', 'Dismiss', { duration: 4000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to download template'), 'Dismiss', {
+        duration: 4000,
+      });
     }
   }
 
@@ -247,12 +250,8 @@ export class MenuImportPage {
       );
       this.result.set(res);
       this.snackBar.open('Menu imported successfully', 'Dismiss', { duration: 3000 });
-    } catch (err) {
-      const message =
-        err instanceof HttpErrorResponse
-          ? (err.error?.message ?? err.message ?? 'Import failed')
-          : 'Import failed';
-      this.snackBar.open(message, 'Dismiss', { duration: 5000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Import failed'), 'Dismiss', { duration: 5000 });
     } finally {
       this.uploading.set(false);
     }

@@ -22,6 +22,7 @@ import {
   UpdateProductDto,
   CreateModifierDto,
   UpdateModifierDto,
+  extractApiError,
 } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 import { CategoryDialogComponent, CategoryDialogResult } from './category-dialog.component';
@@ -273,8 +274,10 @@ export class CatalogPage implements OnInit {
         await firstValueFrom(this.client.categories_CreateCategory(result as CreateCategoryDto));
         this.snackBar.open('Category created.', 'OK', { duration: 3000 });
         await this.loadCategories();
-      } catch {
-        this.snackBar.open('Failed to create category.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to create category.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -292,8 +295,10 @@ export class CatalogPage implements OnInit {
         );
         this.snackBar.open('Category updated.', 'OK', { duration: 3000 });
         await this.loadCategories();
-      } catch {
-        this.snackBar.open('Failed to update category.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to update category.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -309,8 +314,10 @@ export class CatalogPage implements OnInit {
       await firstValueFrom(this.client.categories_DeleteCategory(cat.id!));
       this.snackBar.open('Category deleted.', 'OK', { duration: 3000 });
       await Promise.all([this.loadCategories(), this.loadProducts()]);
-    } catch {
-      this.snackBar.open('Failed to delete category.', 'Dismiss', { duration: 5000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to delete category.'), 'Dismiss', {
+        duration: 5000,
+      });
     }
   }
 
@@ -327,8 +334,10 @@ export class CatalogPage implements OnInit {
         await firstValueFrom(this.client.products_CreateProduct(result as CreateProductDto));
         this.snackBar.open('Product created.', 'OK', { duration: 3000 });
         await this.loadProducts();
-      } catch {
-        this.snackBar.open('Failed to create product.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to create product.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -344,8 +353,10 @@ export class CatalogPage implements OnInit {
         await firstValueFrom(this.client.products_UpdateProduct(p.id!, result as UpdateProductDto));
         this.snackBar.open('Product updated.', 'OK', { duration: 3000 });
         await this.loadProducts();
-      } catch {
-        this.snackBar.open('Failed to update product.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to update product.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -356,8 +367,10 @@ export class CatalogPage implements OnInit {
       await firstValueFrom(this.client.products_DeleteProduct(p.id!));
       this.snackBar.open('Product deleted.', 'OK', { duration: 3000 });
       await this.loadProducts();
-    } catch {
-      this.snackBar.open('Failed to delete product.', 'Dismiss', { duration: 5000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to delete product.'), 'Dismiss', {
+        duration: 5000,
+      });
     }
   }
 
@@ -398,8 +411,10 @@ export class CatalogPage implements OnInit {
         }
         this.snackBar.open('Modifier created.', 'OK', { duration: 3000 });
         await this.loadModifiers();
-      } catch {
-        this.snackBar.open('Failed to create modifier.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to create modifier.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -448,8 +463,10 @@ export class CatalogPage implements OnInit {
         }
         this.snackBar.open('Modifier updated.', 'OK', { duration: 3000 });
         await this.loadModifiers();
-      } catch {
-        this.snackBar.open('Failed to update modifier.', 'Dismiss', { duration: 5000 });
+      } catch (err: unknown) {
+        this.snackBar.open(extractApiError(err, 'Failed to update modifier.'), 'Dismiss', {
+          duration: 5000,
+        });
       }
     });
   }
@@ -460,8 +477,10 @@ export class CatalogPage implements OnInit {
       await firstValueFrom(this.client.modifiers_DeleteModifier(m.id!));
       this.snackBar.open('Modifier deleted.', 'OK', { duration: 3000 });
       await this.loadModifiers();
-    } catch {
-      this.snackBar.open('Failed to delete modifier.', 'Dismiss', { duration: 5000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to delete modifier.'), 'Dismiss', {
+        duration: 5000,
+      });
     }
   }
 

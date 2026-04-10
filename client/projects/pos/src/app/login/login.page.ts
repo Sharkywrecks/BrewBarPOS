@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from 'auth';
-import { StaffDto } from 'api-client';
+import { StaffDto, extractApiError } from 'api-client';
 import { PinPadComponent } from './pin-pad.component';
 
 @Component({
@@ -44,7 +44,14 @@ import { PinPadComponent } from './pin-pad.component';
                   <span>{{ member.displayName }}</span>
                 </button>
               }
-              @if (staff().length === 0) {
+              @if (staffLoadError()) {
+                <div class="no-staff">
+                  <p>
+                    <strong>{{ staffLoadError() }}</strong>
+                  </p>
+                  <button mat-flat-button color="primary" (click)="loadStaff()">Retry</button>
+                </div>
+              } @else if (staff().length === 0) {
                 <div class="no-staff">
                   <p><strong>No staff accounts yet.</strong></p>
                   <p>Open the admin app to create the first administrator, then come back here.</p>
@@ -175,6 +182,7 @@ export class LoginPage {
   protected readonly staff = signal<StaffDto[]>([]);
   protected readonly selectedUser = signal<StaffDto | null>(null);
   protected readonly loadingStaff = signal(true);
+  protected readonly staffLoadError = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -182,12 +190,14 @@ export class LoginPage {
     this.loadStaff();
   }
 
-  private async loadStaff(): Promise<void> {
+  protected async loadStaff(): Promise<void> {
+    this.staffLoadError.set(null);
     try {
       const members = await this.auth.getStaff();
       this.staff.set(members);
-    } catch {
+    } catch (err: unknown) {
       this.staff.set([]);
+      this.staffLoadError.set(extractApiError(err, 'Unable to load staff. Check your connection.'));
     } finally {
       this.loadingStaff.set(false);
     }

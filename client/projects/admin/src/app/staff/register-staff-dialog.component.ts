@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { RegisterDto } from 'api-client';
 
@@ -16,6 +17,7 @@ import { RegisterDto } from 'api-client';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
+    MatIconModule,
     FormsModule,
   ],
   template: `
@@ -31,11 +33,26 @@ import { RegisterDto } from 'api-client';
       </mat-form-field>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Password</mat-label>
-        <input matInput type="password" [(ngModel)]="password" required />
+        <input
+          matInput
+          [type]="showPassword() ? 'text' : 'password'"
+          [(ngModel)]="password"
+          required
+        />
+        <button mat-icon-button matSuffix type="button" (click)="showPassword.set(!showPassword())">
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        @if (password() && passwordErrors().length) {
+          <mat-error>{{ passwordErrors()[0] }}</mat-error>
+        }
+        <mat-hint>Min 8 chars, lowercase, digit, and special character</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>PIN (4-6 digits)</mat-label>
-        <input matInput [(ngModel)]="pin" maxlength="6" />
+        <input matInput [(ngModel)]="pin" maxlength="6" pattern="[0-9]*" />
+        @if (pin() && !pinValid()) {
+          <mat-error>PIN must be 4-6 digits</mat-error>
+        }
       </mat-form-field>
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Role</mat-label>
@@ -48,12 +65,7 @@ import { RegisterDto } from 'api-client';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        [disabled]="!displayName().trim() || !email().trim() || !password().trim()"
-        (click)="onSave()"
-      >
+      <button mat-flat-button color="primary" [disabled]="!formValid()" (click)="onSave()">
         Add
       </button>
     </mat-dialog-actions>
@@ -72,8 +84,34 @@ export class RegisterStaffDialogComponent {
   protected readonly displayName = signal('');
   protected readonly email = signal('');
   protected readonly password = signal('');
+  protected readonly showPassword = signal(false);
   protected readonly pin = signal('');
   protected readonly role = signal('Cashier');
+
+  protected readonly passwordErrors = computed(() => {
+    const pw = this.password();
+    if (!pw) return [];
+    const errors: string[] = [];
+    if (pw.length < 8) errors.push('Must be at least 8 characters');
+    if (!/[a-z]/.test(pw)) errors.push('Must contain a lowercase letter');
+    if (!/\d/.test(pw)) errors.push('Must contain a digit');
+    if (!/[^a-zA-Z0-9]/.test(pw)) errors.push('Must contain a special character');
+    return errors;
+  });
+
+  protected readonly pinValid = computed(() => {
+    const p = this.pin();
+    return !p || /^\d{4,6}$/.test(p);
+  });
+
+  protected readonly formValid = computed(
+    () =>
+      this.displayName().trim().length > 0 &&
+      this.email().trim().length > 0 &&
+      this.password().length > 0 &&
+      this.passwordErrors().length === 0 &&
+      this.pinValid(),
+  );
 
   protected onSave(): void {
     const result: RegisterDto = {

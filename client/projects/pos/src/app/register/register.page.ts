@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CategoryDto, ProductDto, IClient, CLIENT_TOKEN } from 'api-client';
+import { CategoryDto, ProductDto, IClient, CLIENT_TOKEN, extractApiError } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 import { MenuService } from '../services/menu.service';
 import { SettingsService } from '../services/settings.service';
@@ -113,8 +113,10 @@ export class RegisterPage implements OnInit {
     try {
       await this.menu.selectCategory(cat.id!);
       this.updateProducts();
-    } catch {
-      this.snackBar.open('Failed to load category.', 'Dismiss', { duration: 3000 });
+    } catch (err: unknown) {
+      this.snackBar.open(extractApiError(err, 'Failed to load category.'), 'Dismiss', {
+        duration: 3000,
+      });
     }
   }
 

@@ -89,7 +89,7 @@
       <!-- ================================================================
            INSTALL: Business Setup dialog (standalone only)
            ================================================================ -->
-      <Dialog Id="BusinessSetupDlg" Width="370" Height="240" Title="BrewBar POS — Business Setup">
+      <Dialog Id="BusinessSetupDlg" Width="370" Height="260" Title="BrewBar POS — Business Setup">
         <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15"
                  Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Business Setup" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="320" Height="15"
@@ -140,21 +140,40 @@
         <Control Id="AdminPasswordLabel" Type="Text" X="25" Y="160" Width="60" Height="12"
                  NoPrefix="yes" Text="Password:" />
         <Control Id="AdminPasswordEdit" Type="Edit" X="90" Y="158" Width="100" Height="18"
-                 Property="ADMIN_PASSWORD" Password="yes" />
+                 Property="ADMIN_PASSWORD" Password="yes">
+          <Condition Action="hide">SHOW_CREDENTIALS = "1"</Condition>
+          <Condition Action="show">SHOW_CREDENTIALS &lt;&gt; "1"</Condition>
+        </Control>
+        <Control Id="AdminPasswordEditVisible" Type="Edit" X="90" Y="158" Width="100" Height="18"
+                 Property="ADMIN_PASSWORD">
+          <Condition Action="show">SHOW_CREDENTIALS = "1"</Condition>
+          <Condition Action="hide">SHOW_CREDENTIALS &lt;&gt; "1"</Condition>
+        </Control>
         <Control Id="AdminPinLabel" Type="Text" X="195" Y="160" Width="40" Height="12"
                  NoPrefix="yes" Text="PIN:" />
         <Control Id="AdminPinEdit" Type="Edit" X="240" Y="158" Width="60" Height="18"
-                 Property="ADMIN_PIN" Password="yes" />
-        <Control Id="ValidationHint" Type="Text" X="25" Y="183" Width="320" Height="12"
+                 Property="ADMIN_PIN" Password="yes">
+          <Condition Action="hide">SHOW_CREDENTIALS = "1"</Condition>
+          <Condition Action="show">SHOW_CREDENTIALS &lt;&gt; "1"</Condition>
+        </Control>
+        <Control Id="AdminPinEditVisible" Type="Edit" X="240" Y="158" Width="60" Height="18"
+                 Property="ADMIN_PIN">
+          <Condition Action="show">SHOW_CREDENTIALS = "1"</Condition>
+          <Condition Action="hide">SHOW_CREDENTIALS &lt;&gt; "1"</Condition>
+        </Control>
+        <Control Id="ShowCredentials" Type="CheckBox" X="25" Y="183" Width="320" Height="18"
+                 Property="SHOW_CREDENTIALS" CheckBoxValue="1"
+                 Text="Show password and PIN" />
+        <Control Id="ValidationHint" Type="Text" X="25" Y="203" Width="320" Height="12"
                  NoPrefix="yes"
                  Text="All fields required. Password: 8+ chars, digit, lowercase, special char. PIN: 4-6 digits." />
 
-        <Control Id="BottomLine" Type="Line" X="0" Y="204" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="224" Width="370" Height="0" />
 
-        <Control Id="Back" Type="PushButton" X="180" Y="213" Width="56" Height="17" Text="Back">
+        <Control Id="Back" Type="PushButton" X="180" Y="233" Width="56" Height="17" Text="Back">
           <Publish Event="NewDialog" Value="DeployModeDlg" />
         </Control>
-        <Control Id="Next" Type="PushButton" X="236" Y="213" Width="56" Height="17" Default="yes" Text="Next">
+        <Control Id="Next" Type="PushButton" X="236" Y="233" Width="56" Height="17" Default="yes" Text="Next">
           <!-- Block advance unless all four admin fields are non-empty AND password
                is at least 6 chars AND pin is 4-6 chars. SpawnDialog the error
                otherwise. -->
@@ -165,7 +184,7 @@
                    Condition="ADMIN_NAME&lt;&gt;&quot;&quot; AND ADMIN_EMAIL&lt;&gt;&quot;&quot; AND ADMIN_PASSWORD&lt;&gt;&quot;&quot; AND ADMIN_PIN&lt;&gt;&quot;&quot;"
                    Order="2" />
         </Control>
-        <Control Id="Cancel" Type="PushButton" X="304" Y="213" Width="56" Height="17" Cancel="yes" Text="Cancel">
+        <Control Id="Cancel" Type="PushButton" X="304" Y="233" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg" />
         </Control>
       </Dialog>
@@ -269,6 +288,7 @@
     <Property Id="ADMIN_EMAIL" Secure="yes" />
     <Property Id="ADMIN_PASSWORD" Secure="yes" />
     <Property Id="ADMIN_PIN" Secure="yes" />
+    <Property Id="SHOW_CREDENTIALS" Value="0" Secure="yes" />
 
     <!--
       Managed C# custom actions live in BrewBar.CustomActions.CA.dll. This is the

@@ -10,7 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-import { PaymentMethod, CreatePaymentDto } from 'api-client';
+import { PaymentMethod, CreatePaymentDto, extractApiError } from 'api-client';
 import { PrinterService, CashDrawerService, buildReceipt, ReceiptData } from 'printing';
 import { AuthService } from 'auth';
 import { CartStore } from '../store/cart.store';
@@ -531,13 +531,9 @@ export class CheckoutPage {
         },
       });
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'object' && err !== null && 'status' in err
-            ? `Server error (${(err as { status: number }).status})`
-            : 'Payment failed. Please try again.';
-      this.snackBar.open(message, 'Dismiss', { duration: 5000 });
+      this.snackBar.open(extractApiError(err, 'Payment failed. Please try again.'), 'Dismiss', {
+        duration: 5000,
+      });
       this.submitting.set(false);
     }
   }

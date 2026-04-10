@@ -14,6 +14,7 @@ import {
   RegisterDto,
   UpdateUserDto,
   ResetPinDto,
+  extractApiError,
 } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 import { RegisterStaffDialogComponent } from './register-staff-dialog.component';
@@ -143,8 +144,7 @@ export class StaffPage implements OnInit {
         this.snackBar.open('Staff member added.', 'OK', { duration: 3000 });
         await this.loadUsers();
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to add staff member.';
-        this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+        this.showError(err, 'Failed to add staff member.');
       }
     });
   }
@@ -161,8 +161,7 @@ export class StaffPage implements OnInit {
         this.snackBar.open('Staff member updated.', 'OK', { duration: 3000 });
         await this.loadUsers();
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to update staff member.';
-        this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+        this.showError(err, 'Failed to update staff member.');
       }
     });
   }
@@ -178,8 +177,7 @@ export class StaffPage implements OnInit {
         await firstValueFrom(this.client.auth_ResetPin(user.id!, result));
         this.snackBar.open('PIN reset.', 'OK', { duration: 3000 });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to reset PIN.';
-        this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+        this.showError(err, 'Failed to reset PIN.');
       }
     });
   }
@@ -191,8 +189,11 @@ export class StaffPage implements OnInit {
       this.snackBar.open('Staff member deleted.', 'OK', { duration: 3000 });
       await this.loadUsers();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete staff member.';
-      this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
+      this.showError(err, 'Failed to delete staff member.');
     }
+  }
+
+  private showError(err: unknown, fallback: string): void {
+    this.snackBar.open(extractApiError(err, fallback), 'Dismiss', { duration: 5000 });
   }
 }
