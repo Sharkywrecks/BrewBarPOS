@@ -167,7 +167,25 @@ public static class BootstrapService
     {
         try
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (!File.Exists(path)) return;
+            File.Delete(path);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Program Files requires admin to delete. Overwrite with empty
+            // content to scrub credentials; the Inno uninstaller (admin) handles
+            // actual file removal via [InstallDelete].
+            try
+            {
+                File.WriteAllText(path, "{}");
+                logger.LogWarning(
+                    "Could not delete bootstrap file at {Path} (no admin rights) — scrubbed contents instead.",
+                    path);
+            }
+            catch (Exception inner)
+            {
+                logger.LogError(inner, "Failed to scrub bootstrap file at {Path} — credentials may remain on disk!", path);
+            }
         }
         catch (Exception ex)
         {

@@ -30,6 +30,7 @@ SolidCompression=yes
 ; The Electron + .NET payload is currently win-x64 only — if targeting
 ; 32-bit POS hardware, rebuild the API with -r win-x86 and Electron for ia32.
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile=app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 WizardStyle=modern
 PrivilegesRequired=admin
@@ -484,7 +485,7 @@ end;
 
 procedure WriteBootstrapJson;
 var
-  TaxPctInt: Integer;
+  TaxPctInt, TmpInt: Integer;
   TaxRate: string;
   Content, ApiDir, Path: string;
 begin
@@ -518,7 +519,14 @@ begin
   if not SaveStringToFile(Path, Content, False) then
     MsgBox('Failed to write bootstrap.json to:' + #13#10 + Path + #13#10 +
            'The admin account will not be seeded. Use /api/auth/setup after launch.',
-           mbError, MB_OK);
+           mbError, MB_OK)
+  else
+  begin
+    // Grant the current user modify permission so the API process (non-admin)
+    // can delete the file after consuming it. Without this, Program Files ACLs
+    // block File.Delete and File.WriteAllText, leaving credentials on disk.
+    Exec('icacls.exe', '"' + Path + '" /grant "' + GetUserNameString + '":(M)', '', SW_HIDE, ewWaitUntilTerminated, TmpInt);
+  end;
 end;
 
 procedure WriteJwtSecret;

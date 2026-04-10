@@ -1,7 +1,7 @@
-import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, Inject, NgZone, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from 'api-client';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, catchError, of, map } from 'rxjs';
 
 const HEARTBEAT_INTERVAL_MS = 15_000; // Check every 15 seconds
 
@@ -14,13 +14,16 @@ export class ConnectivityService implements OnDestroy {
 
   constructor(
     private readonly http: HttpClient,
+    private readonly ngZone: NgZone,
     @Inject(API_BASE_URL) private readonly baseUrl: string,
   ) {}
 
   /** Start the heartbeat polling loop. Call once at app startup. */
   start(): void {
     if (this.intervalId) return;
-    this.check();
+    // Defer the first check so it doesn't fire during APP_INITIALIZER,
+    // where HTTP errors can trigger NG0203 via zone.js error handling.
+    setTimeout(() => this.check(), 1000);
     this.intervalId = setInterval(() => this.check(), HEARTBEAT_INTERVAL_MS);
   }
 
@@ -37,13 +40,16 @@ export class ConnectivityService implements OnDestroy {
 
   /** Perform a single connectivity check against /health/ready. */
   async check(): Promise<boolean> {
-    try {
-      await firstValueFrom(this.http.get(`${this.baseUrl}/health/ready`, { responseType: 'text' }));
-      this.isOnline.set(true);
-      return true;
-    } catch {
-      this.isOnline.set(false);
-      return false;
-    }
+    // Run outside Angular zone so HTTP errors don't trigger the global ErrorHandler
+    const online = await this.ngZone.runOutsideAngular(() =>
+      firstValueFrom(
+        this.http.get(`${this.baseUrl}/health/ready`, { responseType: 'text' }).pipe(
+          map(() => true),
+          catchError(() => of(false)),
+        ),
+      ),
+    );
+    this.isOnline.set(online);
+    return online;
   }
 }

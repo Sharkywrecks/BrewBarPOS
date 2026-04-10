@@ -1,5 +1,5 @@
 import { Injectable, Inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, catchError, of } from 'rxjs';
 import { CLIENT_TOKEN, IClient, BusinessSettingsDto, Currency } from 'api-client';
 import { getCurrencySymbol } from 'shared-models';
 import { environment } from '../../environments/environment';
@@ -17,14 +17,11 @@ export class SettingsService {
   readonly loaded = signal(false);
 
   async load(): Promise<void> {
-    try {
-      const s = await firstValueFrom(this.client.settings_GetSettings());
-      this.settings.set(s);
-    } catch {
-      // Fall back to environment defaults if API is unreachable
-    } finally {
-      this.loaded.set(true);
-    }
+    const s = await firstValueFrom(
+      this.client.settings_GetSettings().pipe(catchError(() => of(null))),
+    );
+    if (s) this.settings.set(s);
+    this.loaded.set(true);
   }
 
   get storeName(): string {

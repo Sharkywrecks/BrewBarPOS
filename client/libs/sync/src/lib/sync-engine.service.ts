@@ -22,8 +22,6 @@ export class SyncEngineService implements OnDestroy {
     if (this.intervalId) return;
     this.connectivity.start();
     this.intervalId = setInterval(() => this.processOutbox(), SYNC_INTERVAL_MS);
-    // Run immediately on start
-    this.processOutbox();
   }
 
   stop(): void {

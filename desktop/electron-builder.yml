@@ -16,9 +16,14 @@ extraResources:
     filter:
       - "**/*"
 
+extraFiles:
+  - from: ../installer/app.ico
+    to: app.ico
+
 win:
   target: dir
-  signAndEditExecutable: false
+  icon: ../installer/app.ico
+  signAndEditExecutable: true
 
 asar: true
 asarUnpack:

@@ -1,10 +1,10 @@
-import { ErrorHandler, Injectable, inject } from '@angular/core';
+import { ErrorHandler, Injectable, Injector } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { extractApiError } from 'api-client';
 
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
-  private readonly snackBar = inject(MatSnackBar);
+  constructor(private readonly injector: Injector) {}
 
   handleError(error: unknown): void {
     const message = extractApiError(error, 'An unexpected error occurred');
@@ -17,6 +17,13 @@ export class GlobalErrorHandler implements ErrorHandler {
     }
 
     console.error('[BrewBar POS]', error);
-    this.snackBar.open(message, 'Dismiss', { duration: 5000 });
+
+    // Lazy-inject MatSnackBar to avoid NG0203 during early bootstrap
+    try {
+      const snackBar = this.injector.get(MatSnackBar);
+      snackBar.open(message, 'Dismiss', { duration: 5000 });
+    } catch {
+      // Snackbar not available yet during early bootstrap — console.error above is enough
+    }
   }
 }
