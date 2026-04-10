@@ -3,10 +3,9 @@ import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ComponentRef } from '@angular/core';
 import { ProductCardComponent } from './product-card.component';
 import { ProductDto, Currency } from 'api-client';
-import { SettingsService } from '../services/settings.service';
+import { CURRENCY_PROVIDER } from 'ui';
 
-const settingsStub = {
-  settings: () => ({ storeName: 'Test', taxRate: 0.15, currency: Currency.SCR }),
+const currencyProviderStub = {
   get currencySymbol() {
     return 'SCR ';
   },
@@ -30,7 +29,7 @@ describe('ProductCardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProductCardComponent],
-      providers: [{ provide: SettingsService, useValue: settingsStub }],
+      providers: [{ provide: CURRENCY_PROVIDER, useValue: currencyProviderStub }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ProductCardComponent);

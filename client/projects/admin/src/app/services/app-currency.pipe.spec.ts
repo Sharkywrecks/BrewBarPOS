@@ -1,26 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Currency, BusinessSettingsDto } from 'api-client';
-import { AppCurrencyPipe } from './app-currency.pipe';
-import { SettingsService } from './settings.service';
+import { Currency } from 'api-client';
+import { AppCurrencyPipe, CURRENCY_PROVIDER, CurrencyProvider } from 'ui';
+import { getCurrencySymbol } from 'shared-models';
 
-function makeSettingsStub(currency: Currency): Partial<SettingsService> {
-  const settings: BusinessSettingsDto = {
-    storeName: 'Test',
-    taxRate: 0.15,
-    currency,
-  };
-  const SYMBOLS: Record<Currency, string> = {
-    [Currency.SCR]: 'SCR ',
-    [Currency.USD]: '$ ',
-    [Currency.EUR]: '€ ',
-    [Currency.GBP]: '£ ',
-    [Currency.AED]: 'AED ',
-  };
+function makeCurrencyProvider(currency: Currency): CurrencyProvider {
   return {
-    settings: (() => settings) as SettingsService['settings'],
     get currencySymbol() {
-      return SYMBOLS[currency];
+      return getCurrencySymbol(currency);
     },
   };
 }
@@ -30,7 +17,7 @@ function createPipe(currency: Currency): AppCurrencyPipe {
   TestBed.configureTestingModule({
     providers: [
       AppCurrencyPipe,
-      { provide: SettingsService, useValue: makeSettingsStub(currency) },
+      { provide: CURRENCY_PROVIDER, useValue: makeCurrencyProvider(currency) },
     ],
   });
   return TestBed.inject(AppCurrencyPipe);
