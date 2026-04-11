@@ -1,12 +1,16 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CategoryDto, ProductDto, IClient, CLIENT_TOKEN, extractApiError } from 'api-client';
+import { ConnectivityService } from 'sync';
 import { firstValueFrom } from 'rxjs';
 import { MenuService } from '../services/menu.service';
 import { SettingsService } from '../services/settings.service';
+import { ShiftService } from '../services/shift.service';
 import { CartStore } from '../store/cart.store';
 import { CartLineItem } from '../store/cart.models';
 import { CategoryBarComponent } from './category-bar.component';
@@ -27,6 +31,8 @@ import { BarcodeInputComponent } from './barcode-input.component';
     MatDialogModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatIconModule,
+    MatTooltipModule,
   ],
   template: `
     <div class="register-layout">
@@ -36,12 +42,47 @@ import { BarcodeInputComponent } from './barcode-input.component';
             <mat-spinner diameter="48"></mat-spinner>
           </div>
         } @else {
-          <app-barcode-input (barcodeScanned)="onBarcodeScanned($event)" />
-          <app-category-bar
-            [categories]="menu.categories()"
-            [selectedIndex]="selectedCategoryIndex()"
-            (categorySelected)="onCategorySelected($event)"
-          />
+          <!-- Action bar -->
+          <div class="action-bar">
+            <app-barcode-input
+              class="barcode-slot"
+              (barcodeScanned)="onBarcodeScanned($event)"
+              (searchChanged)="onSearchChanged($event)"
+            />
+
+            <div class="action-bar-info">
+              @if (shift.currentShift(); as s) {
+                <span class="info-chip shift-chip" matTooltip="Shift open">
+                  <mat-icon>timer</mat-icon>
+                  Shift open
+                </span>
+              } @else {
+                <span class="info-chip no-shift-chip" matTooltip="No active shift">
+                  <mat-icon>timer_off</mat-icon>
+                  No shift
+                </span>
+              }
+
+              <span
+                class="info-chip connectivity-chip"
+                [class.online]="connectivity.isOnline()"
+                [class.offline]="!connectivity.isOnline()"
+              >
+                <mat-icon>{{ connectivity.isOnline() ? 'wifi' : 'wifi_off' }}</mat-icon>
+                {{ connectivity.isOnline() ? 'Online' : 'Offline' }}
+              </span>
+
+              <span class="clock">{{ currentTime() }}</span>
+            </div>
+          </div>
+
+          @if (!searchQuery()) {
+            <app-category-bar
+              [categories]="menu.categories()"
+              [selectedIndex]="selectedCategoryIndex()"
+              (categorySelected)="onCategorySelected($event)"
+            />
+          }
           <app-product-grid
             [products]="currentProducts()"
             (productSelected)="onProductSelected($event)"
@@ -75,10 +116,78 @@ import { BarcodeInputComponent } from './barcode-input.component';
         justify-content: center;
         flex: 1;
       }
+
+      /* Action bar */
+      .action-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: var(--mat-sys-surface);
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+      }
+      .barcode-slot {
+        width: 280px;
+        flex-shrink: 0;
+      }
+      .action-bar-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
+
+      /* Info chips */
+      .info-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 4px 10px 4px 6px;
+        border-radius: 20px;
+        white-space: nowrap;
+        height: 28px;
+      }
+      .info-chip mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .shift-chip {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+      .no-shift-chip {
+        background: var(--mat-sys-surface-container-high);
+        color: var(--mat-sys-on-surface-variant);
+      }
+      .connectivity-chip.online {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+      .connectivity-chip.offline {
+        background: var(--mat-sys-error-container);
+        color: var(--mat-sys-on-error-container);
+      }
+
+      /* Clock */
+      .clock {
+        font-size: 14px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        color: var(--mat-sys-on-surface-variant);
+        padding: 0 4px;
+        min-width: 52px;
+        text-align: center;
+      }
     `,
   ],
 })
-export class RegisterPage implements OnInit {
+export class RegisterPage implements OnInit, OnDestroy {
   protected readonly menu = inject(MenuService);
   private readonly cart = inject(CartStore);
   private readonly settingsService = inject(SettingsService);
@@ -86,13 +195,25 @@ export class RegisterPage implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly client = inject<IClient>(CLIENT_TOKEN);
+  protected readonly shift = inject(ShiftService);
+  protected readonly connectivity = inject(ConnectivityService);
 
   protected readonly selectedCategoryIndex = signal(0);
   protected readonly loadError = signal(false);
+  protected readonly currentTime = signal(this.formatTime());
+  protected readonly searchQuery = signal('');
 
   protected currentProducts = signal<ProductDto[]>([]);
 
+  private clockInterval: ReturnType<typeof setInterval> | null = null;
+
+  private formatTime(): string {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
   async ngOnInit(): Promise<void> {
+    this.clockInterval = setInterval(() => this.currentTime.set(this.formatTime()), 15_000);
     try {
       await this.menu.loadCategories();
       this.updateProducts();
@@ -178,6 +299,23 @@ export class RegisterPage implements OnInit {
     });
   }
 
+  onSearchChanged(query: string): void {
+    this.searchQuery.set(query);
+    if (!query) {
+      this.updateProducts();
+      return;
+    }
+    const lower = query.toLowerCase();
+    const allProducts = this.menu.getAllCachedProducts();
+    const matches = allProducts.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(lower) ||
+        p.sku?.toLowerCase().includes(lower) ||
+        p.barcode?.toLowerCase().includes(lower),
+    );
+    this.currentProducts.set(matches);
+  }
+
   async onBarcodeScanned(barcode: string): Promise<void> {
     try {
       const product = await firstValueFrom(this.client.products_LookupProduct(barcode, undefined));
@@ -186,6 +324,12 @@ export class RegisterPage implements OnInit {
       }
     } catch {
       this.snackBar.open(`Product not found: ${barcode}`, 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
     }
   }
 

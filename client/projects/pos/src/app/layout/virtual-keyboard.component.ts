@@ -7,6 +7,7 @@ import {
   afterNextRender,
   OnDestroy,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { VirtualKeyboardService } from '../services/virtual-keyboard.service';
 import Keyboard from 'simple-keyboard';
 
@@ -14,110 +15,76 @@ import Keyboard from 'simple-keyboard';
   selector: 'app-virtual-keyboard',
   standalone: true,
   template: `
-    @if (keyboard.activeInput()) {
+    <div
+      #popoverEl
+      popover="manual"
+      class="vk-popover"
+      (mousedown)="$event.preventDefault()"
+      (touchstart)="$event.preventDefault()"
+    >
       <div class="vk-backdrop" (pointerdown)="onBackdropTap($event)"></div>
-      <div
-        class="vk-container"
-        (mousedown)="$event.preventDefault()"
-        (touchstart)="$event.preventDefault()"
-      >
+      <div class="vk-container">
+        <button class="vk-close" (click)="onClose()" aria-label="Close keyboard">
+          <span class="vk-close-icon">&#x2715;</span>
+        </button>
         <div class="vk-keyboard" #keyboardEl></div>
       </div>
-    }
+    </div>
   `,
-  styles: [
-    `
-      .vk-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 999;
-      }
-
-      .vk-container {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 1000;
-        background: var(--mat-sys-surface-container, #f0f0f0);
-        border-top: 1px solid var(--mat-sys-outline-variant, #ccc);
-        padding: 8px 8px 12px;
-        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
-      }
-
-      :host ::ng-deep .simple-keyboard {
-        max-width: 900px;
-        margin: 0 auto;
-        background: transparent;
-        border-radius: 0;
-        padding: 0;
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-button {
-        height: 52px;
-        border-radius: 8px;
-        background: var(--mat-sys-surface, #fff);
-        color: var(--mat-sys-on-surface, #1a1a1a);
-        border: none;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-        font-size: 18px;
-        font-weight: 500;
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-button:active {
-        background: var(--mat-sys-primary-container, #ddd);
-        color: var(--mat-sys-on-primary-container, #000);
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-button.hg-activeButton {
-        background: var(--mat-sys-primary-container, #ddd);
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-row {
-        margin-bottom: 4px;
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-button[data-skbtn='{bksp}'],
-      :host ::ng-deep .simple-keyboard .hg-button[data-skbtn='{enter}'],
-      :host ::ng-deep .simple-keyboard .hg-button[data-skbtn='{shift}'],
-      :host ::ng-deep .simple-keyboard .hg-button[data-skbtn='{lock}'] {
-        background: var(--mat-sys-surface-container-high, #e0e0e0);
-      }
-
-      :host ::ng-deep .simple-keyboard .hg-button[data-skbtn='{space}'] {
-        min-width: 250px;
-      }
-    `,
-  ],
 })
 export class VirtualKeyboardComponent implements OnDestroy {
   protected readonly keyboard = inject(VirtualKeyboardService);
   private readonly keyboardEl = viewChild<ElementRef<HTMLElement>>('keyboardEl');
+  private readonly popoverEl = viewChild<ElementRef<HTMLElement>>('popoverEl');
+  private readonly el = inject(ElementRef);
+  private readonly doc = inject(DOCUMENT);
   private keyboardInstance: Keyboard | null = null;
+
+  private rendered = false;
 
   constructor() {
     afterNextRender(() => {
-      // Whenever activeInput changes, rebuild or destroy the keyboard
-      effect(() => {
-        const input = this.keyboard.activeInput();
-        const layout = this.keyboard.layout();
-        const el = this.keyboardEl();
+      this.rendered = true;
+      this.doc.body.appendChild(this.el.nativeElement);
+    });
 
-        if (input && el) {
-          this.buildKeyboard(el.nativeElement, layout, input);
-        } else {
-          this.destroyKeyboard();
-        }
-      });
+    effect(() => {
+      const input = this.keyboard.activeInput();
+      const layout = this.keyboard.layout();
+      const el = this.keyboardEl();
+      const popover = this.popoverEl()?.nativeElement;
+
+      if (!this.rendered) return;
+
+      if (input && el && popover) {
+        try {
+          popover.showPopover();
+        } catch {}
+        this.buildKeyboard(el.nativeElement, layout, input);
+      } else {
+        this.destroyKeyboard();
+        try {
+          popover?.hidePopover();
+        } catch {}
+      }
     });
   }
 
   ngOnDestroy(): void {
     this.destroyKeyboard();
+    try {
+      this.popoverEl()?.nativeElement.hidePopover();
+    } catch {}
+    this.el.nativeElement.remove();
+  }
+
+  protected onClose(): void {
+    const input = this.keyboard.activeInput();
+    input?.blur();
+    this.keyboard.hide();
   }
 
   protected onBackdropTap(event: PointerEvent): void {
-    // Only dismiss if tapping outside the keyboard and outside the active input
     const input = this.keyboard.activeInput();
     if (input && !input.contains(event.target as Node)) {
       input.blur();
@@ -157,8 +124,8 @@ export class VirtualKeyboardComponent implements OnDestroy {
             numbers: [
               '1 2 3 4 5 6 7 8 9 0',
               '- / : ; ( ) $ & @',
-              '{abc} . , ? ! \' " {bksp}',
-              '{space} {enter}',
+              '. , ? ! \' " {bksp}',
+              '{abc} {space} . {enter}',
             ],
           },
       display: {
@@ -174,12 +141,10 @@ export class VirtualKeyboardComponent implements OnDestroy {
       inputName: 'pos-keyboard',
     });
 
-    // Sync the current input value into the keyboard
     this.keyboardInstance.setInput(input.value ?? '');
   }
 
   private onKeyboardChange(value: string, input: HTMLInputElement | HTMLTextAreaElement): void {
-    // For number inputs, we need to use native input setter to trigger Angular
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
       input instanceof HTMLTextAreaElement
         ? HTMLTextAreaElement.prototype

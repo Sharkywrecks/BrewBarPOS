@@ -1,4 +1,4 @@
-import { Injectable, InjectionToken, inject } from '@angular/core';
+import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { cashDrawerKick } from './escpos-commands';
 
@@ -21,6 +21,17 @@ export const PRINT_API_CLIENT = new InjectionToken<PrintApiClient>('PRINT_API_CL
 export interface PrintApiClient {
   print_Print(body?: { data: string | null }): import('rxjs').Observable<unknown>;
   print_GetStatus(): import('rxjs').Observable<unknown>;
+  print_GetPrinters(): import('rxjs').Observable<PrinterInfoDto>;
+  print_SelectPrinter(body?: { printerName?: string | null }): import('rxjs').Observable<unknown>;
+}
+
+export interface PrinterInfoDto {
+  connected?: boolean;
+  mode?: string | null;
+  printerName?: string | null;
+  networkHost?: string | null;
+  networkPort?: number | null;
+  installedPrinters?: string[] | null;
 }
 
 /** Minimal WebUSB types — avoids dependency on @anthropic-ai/sdk or dom-webusb typings */
@@ -66,9 +77,11 @@ export class PrinterService {
   private _mode: PrinterMode | null = null;
   private _relayConnected = false;
 
+  /** Reactive connection state — safe for Angular template bindings */
+  readonly connected = signal(false);
+
   get isConnected(): boolean {
-    if (this._mode === 'relay') return this._relayConnected;
-    return this.device?.opened ?? false;
+    return this.connected();
   }
 
   get mode(): PrinterMode | null {
@@ -106,11 +119,28 @@ export class PrinterService {
     await this.print(cashDrawerKick(pin));
   }
 
+  /** Fetch printer info and installed printers from the backend relay */
+  async getPrinterInfo(): Promise<PrinterInfoDto | null> {
+    if (!this.apiClient) return null;
+    return firstValueFrom(this.apiClient.print_GetPrinters());
+  }
+
+  /** Select a specific Windows printer on the backend */
+  async selectPrinter(printerName: string | null): Promise<void> {
+    if (!this.apiClient) {
+      throw new Error('Printer selection requires a backend connection');
+    }
+    await firstValueFrom(this.apiClient.print_SelectPrinter({ printerName }));
+    // Re-check connection status
+    await this.connectRelay();
+  }
+
   /** Disconnect from the printer */
   async disconnect(): Promise<void> {
     if (this._mode === 'relay') {
       this._relayConnected = false;
       this._mode = null;
+      this.connected.set(false);
       return;
     }
 
@@ -120,6 +150,7 @@ export class PrinterService {
     this.device = null;
     this.endpoint = null;
     this._mode = null;
+    this.connected.set(false);
   }
 
   // ── WebUSB mode ──────────────────────────────────────────────
@@ -163,6 +194,7 @@ export class PrinterService {
     await this.device.claimInterface(claimedIface.interfaceNumber);
     this.endpoint = outEp.endpointNumber;
     this._mode = 'usb';
+    this.connected.set(true);
   }
 
   // ── Relay mode ───────────────────────────────────────────────
@@ -178,6 +210,7 @@ export class PrinterService {
 
     this._relayConnected = true;
     this._mode = 'relay';
+    this.connected.set(true);
   }
 
   private async printRelay(data: Uint8Array): Promise<void> {

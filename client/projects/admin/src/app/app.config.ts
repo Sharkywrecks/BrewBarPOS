@@ -9,9 +9,8 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { routes } from './app.routes';
-import { API_BASE_URL, Client, CLIENT_TOKEN } from 'api-client';
+import { Client, CLIENT_TOKEN } from 'api-client';
 import { jwtInterceptor } from 'auth';
-import { RuntimeConfigService } from './services/runtime-config.service';
 import { SettingsService } from './services/settings.service';
 import { CURRENCY_PROVIDER } from 'ui';
 
@@ -22,17 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([jwtInterceptor])),
     provideAnimationsAsync(),
     provideNativeDateAdapter(),
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (cfg: RuntimeConfigService) => () => cfg.load(),
-      deps: [RuntimeConfigService],
-      multi: true,
-    },
-    {
-      provide: API_BASE_URL,
-      useFactory: (cfg: RuntimeConfigService) => cfg.apiUrl,
-      deps: [RuntimeConfigService],
-    },
+    // API_BASE_URL is provided by main.ts after loading config.json
     { provide: CLIENT_TOKEN, useClass: Client },
     { provide: CURRENCY_PROVIDER, useExisting: SettingsService },
     {

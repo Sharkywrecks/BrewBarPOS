@@ -19,6 +19,11 @@ public class RawPrinterService : IRawPrinterService
     /// </summary>
     private string? _resolvedMode;
 
+    /// <summary>
+    /// Explicitly selected Windows printer name (overrides auto-search).
+    /// </summary>
+    private string? _selectedPrinterName;
+
     public RawPrinterService(IConfiguration config, IWindowsRawPrinter windowsPrinter, ILogger<RawPrinterService> logger)
     {
         _host = config["Printer:Host"] ?? "127.0.0.1";
@@ -58,6 +63,29 @@ public class RawPrinterService : IRawPrinterService
         return mode != null;
     }
 
+    public PrinterInfo GetPrinterInfo()
+    {
+        var winName = _selectedPrinterName ?? ResolveWindowsPrinterName();
+        return new PrinterInfo
+        {
+            Connected = _resolvedMode != null,
+            Mode = _resolvedMode,
+            PrinterName = _resolvedMode == "Windows" ? winName : null,
+            NetworkHost = _host,
+            NetworkPort = _port,
+        };
+    }
+
+    public List<string> GetInstalledPrinters() => _windowsPrinter.GetInstalledPrinters();
+
+    public void SelectPrinter(string? printerName)
+    {
+        _selectedPrinterName = printerName;
+        // Reset resolved mode so next print re-resolves with the new selection
+        _resolvedMode = null;
+        _logger.LogInformation("Printer selection changed to '{Printer}'", printerName ?? "(auto)");
+    }
+
     // ── Mode resolution ────────────────────────────────────────
 
     private async Task<string?> ResolveMode(CancellationToken ct)
@@ -89,6 +117,10 @@ public class RawPrinterService : IRawPrinterService
     /// </summary>
     private string? ResolveWindowsPrinterName()
     {
+        // Explicit runtime selection takes priority
+        if (!string.IsNullOrEmpty(_selectedPrinterName))
+            return _selectedPrinterName;
+
         if (!string.IsNullOrEmpty(_windowsPrinterName))
             return _windowsPrinterName;
 

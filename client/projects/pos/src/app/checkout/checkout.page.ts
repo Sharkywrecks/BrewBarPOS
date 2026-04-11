@@ -156,8 +156,11 @@ import { SettingsService } from '../services/settings.service';
               }
               <button mat-flat-button class="num-btn" (click)="onNumKey('.')">.</button>
               <button mat-flat-button class="num-btn" (click)="onNumKey('0')">0</button>
-              <button mat-flat-button class="num-btn" (click)="clearCash()">C</button>
+              <button mat-flat-button class="num-btn" (click)="backspaceCash()">
+                <mat-icon>backspace</mat-icon>
+              </button>
             </div>
+            <button mat-stroked-button class="clear-cash-btn" (click)="clearCash()">Clear</button>
             @if (change() > 0) {
               <div class="change-display">
                 Change: <strong>{{ change() | appCurrency }}</strong>
@@ -198,6 +201,7 @@ import { SettingsService } from '../services/settings.service';
         max-width: 560px;
         width: 100%;
       }
+
       .back-btn {
         margin-bottom: 8px;
       }
@@ -296,9 +300,6 @@ import { SettingsService } from '../services/settings.service';
       }
       .method-btn mat-icon {
         margin-right: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
         vertical-align: middle;
       }
       .cash-section {
@@ -338,6 +339,15 @@ import { SettingsService } from '../services/settings.service';
         font-size: 20px;
         font-weight: 500;
       }
+      .clear-cash-btn {
+        width: 100%;
+        margin-top: 8px;
+        height: 44px;
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--mat-sys-error);
+        border-color: var(--mat-sys-error);
+      }
       .change-display {
         text-align: center;
         font-size: 20px;
@@ -353,7 +363,7 @@ import { SettingsService } from '../services/settings.service';
         font-size: 18px;
         font-weight: 600;
         margin-top: 24px;
-        margin-bottom: 24px;
+        margin-bottom: 80px;
         border-radius: 12px;
       }
     `,
@@ -454,6 +464,10 @@ export class CheckoutPage {
     // Limit to 2 decimal places
     if (current.includes('.') && current.split('.')[1].length >= 2) return;
     this.cashInput.update((v) => v + key);
+  }
+
+  protected backspaceCash(): void {
+    this.cashInput.update((v) => v.slice(0, -1));
   }
 
   protected clearCash(): void {

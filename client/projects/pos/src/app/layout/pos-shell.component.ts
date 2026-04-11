@@ -1,6 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -17,6 +16,7 @@ import {
   CloseShiftResult,
 } from '../register/close-shift-dialog.component';
 import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-dialog.component';
+import { PrinterSetupDialogComponent } from './printer-setup-dialog.component';
 
 @Component({
   selector: 'app-pos-shell',
@@ -24,7 +24,6 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
   imports: [
     RouterOutlet,
     RouterLink,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -32,61 +31,75 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
     MatDialogModule,
   ],
   template: `
-    <mat-toolbar color="primary" class="pos-toolbar">
-      <span class="brand">BrewBar</span>
-      @if (!connectivity.isOnline()) {
-        <mat-icon
-          class="offline-indicator"
-          matTooltip="Offline — orders will sync when connection is restored"
-          >cloud_off</mat-icon
-        >
-      }
-      <span class="spacer"></span>
-      @if (shift.currentShift()) {
-        <button mat-icon-button matTooltip="Cash Drop" (click)="onCashDrop()">
-          <mat-icon>move_to_inbox</mat-icon>
+    <nav class="pos-navbar">
+      <div class="nav-left">
+        <a routerLink="/register" class="brand">
+          <mat-icon class="brand-icon">local_cafe</mat-icon>
+          <span class="brand-text">BrewBar</span>
+        </a>
+        @if (!connectivity.isOnline()) {
+          <span
+            class="status-chip offline-chip"
+            matTooltip="Offline — orders will sync when connection is restored"
+          >
+            <mat-icon>cloud_off</mat-icon>
+            Offline
+          </span>
+        }
+        @if (outbox.hasPending()) {
+          <button
+            class="status-chip sync-chip"
+            matTooltip="Syncing {{ outbox.pendingCount() }} offline order(s)..."
+            (click)="syncEngine.processOutbox()"
+          >
+            <mat-icon class="syncing">sync</mat-icon>
+            {{ outbox.pendingCount() }}
+          </button>
+        }
+      </div>
+
+      <div class="nav-actions">
+        @if (shift.currentShift()) {
+          <button mat-icon-button matTooltip="Cash Drop" (click)="onCashDrop()">
+            <mat-icon>move_to_inbox</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Close Shift" (click)="onCloseShift()">
+            <mat-icon>point_of_sale</mat-icon>
+          </button>
+          <span class="nav-divider"></span>
+        }
+        <button mat-icon-button routerLink="/history" matTooltip="Order history">
+          <mat-icon>history</mat-icon>
         </button>
-        <button mat-icon-button matTooltip="Close Shift" (click)="onCloseShift()">
-          <mat-icon>point_of_sale</mat-icon>
-        </button>
-      }
-      <button mat-icon-button routerLink="/history" matTooltip="Order history">
-        <mat-icon>history</mat-icon>
-      </button>
-      @if (outbox.hasPending()) {
         <button
           mat-icon-button
-          matTooltip="Syncing {{ outbox.pendingCount() }} offline order(s)..."
-          (click)="syncEngine.processOutbox()"
+          (click)="onPrinterToggle()"
+          [matTooltip]="printer.connected() ? 'Printer connected' : 'Connect printer'"
+          aria-label="Printer setup"
+          [class.printer-on]="printer.connected()"
         >
-          <mat-icon class="syncing">sync</mat-icon>
+          <mat-icon>
+            {{ printer.connected() ? 'print' : 'print_disabled' }}
+          </mat-icon>
         </button>
-      }
-      <button
-        mat-icon-button
-        (click)="onPrinterToggle()"
-        [matTooltip]="printer.isConnected ? 'Printer connected' : 'Connect printer'"
-        aria-label="Printer connection"
-      >
-        <mat-icon [class.connected]="printer.isConnected">
-          {{ printer.isConnected ? 'print' : 'print_disabled' }}
-        </mat-icon>
-      </button>
-      @if (auth.canAccessAdminPanel()) {
-        <a
-          mat-icon-button
-          href="/admin/"
-          matTooltip="Open admin panel"
-          aria-label="Open admin panel"
-        >
-          <mat-icon>admin_panel_settings</mat-icon>
-        </a>
-      }
-      <span class="cashier-name">{{ auth.currentUser()?.displayName }}</span>
-      <button mat-icon-button (click)="auth.logout()" aria-label="Logout">
-        <mat-icon>logout</mat-icon>
-      </button>
-    </mat-toolbar>
+        @if (auth.canAccessAdminPanel()) {
+          <a
+            mat-icon-button
+            href="/admin/"
+            matTooltip="Open admin panel"
+            aria-label="Open admin panel"
+          >
+            <mat-icon>admin_panel_settings</mat-icon>
+          </a>
+        }
+        <span class="nav-divider"></span>
+        <button class="user-chip" matTooltip="Logout" (click)="auth.logout()">
+          <mat-icon class="user-avatar">person</mat-icon>
+          <span class="user-name">{{ auth.currentUser()?.displayName }}</span>
+          <mat-icon class="logout-icon">logout</mat-icon>
+        </button>
+      </div>
+    </nav>
     <div class="pos-content">
       <router-outlet />
     </div>
@@ -98,52 +111,183 @@ import { CashDropDialogComponent, CashDropResult } from '../register/cash-drop-d
         flex-direction: column;
         height: 100vh;
       }
-      .pos-toolbar {
+
+      .pos-navbar {
         flex-shrink: 0;
-        height: 48px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        background: var(--mat-sys-surface-container);
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+        gap: 8px;
+      }
+
+      /* Left section: brand + status chips */
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        color: var(--mat-sys-on-surface);
+      }
+      .brand-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--mat-sys-primary);
+      }
+      .brand-text {
+        font-weight: 800;
+        font-size: 18px;
+        letter-spacing: 0.5px;
+      }
+
+      /* Status chips (offline, sync) */
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 10px 2px 6px;
+        border-radius: 20px;
+        border: none;
+        cursor: default;
+        line-height: 1;
+        height: 26px;
+      }
+      .status-chip mat-icon {
         font-size: 16px;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .offline-chip {
+        background: var(--mat-sys-error-container);
+        color: var(--mat-sys-on-error-container);
+      }
+      .sync-chip {
+        background: #fff3e0;
+        color: #e65100;
+        cursor: pointer;
+      }
+      .sync-chip:hover {
+        background: #ffe0b2;
+      }
+
+      /* Right section: actions + user */
+      .nav-actions {
+        display: flex;
+        align-items: center;
         gap: 2px;
       }
-      .pos-toolbar button[mat-icon-button] {
+      .nav-actions button[mat-icon-button],
+      .nav-actions a[mat-icon-button] {
         width: 40px;
         height: 40px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        color: var(--mat-sys-on-surface-variant);
       }
-      .pos-toolbar button[mat-icon-button] ::ng-deep .mat-icon {
+      .nav-actions button[mat-icon-button]:hover,
+      .nav-actions a[mat-icon-button]:hover {
+        color: var(--mat-sys-on-surface);
+      }
+      .nav-actions button[mat-icon-button] ::ng-deep .mat-icon,
+      .nav-actions a[mat-icon-button] ::ng-deep .mat-icon {
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      .brand {
-        font-weight: 800;
-        letter-spacing: 1px;
+      .printer-on ::ng-deep .mat-icon {
+        color: var(--mat-sys-primary) !important;
+      }
+
+      .nav-divider {
+        width: 1px;
+        height: 24px;
+        background: var(--mat-sys-outline-variant);
+        margin: 0 4px;
+        flex-shrink: 0;
+      }
+
+      /* User chip */
+      .user-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px 4px 4px;
+        border-radius: 24px;
+        border: 1px solid var(--mat-sys-outline-variant);
+        background: var(--mat-sys-surface);
+        color: var(--mat-sys-on-surface);
+        cursor: pointer;
+        height: 36px;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .user-chip:hover {
+        background: var(--mat-sys-surface-container-high);
+        border-color: var(--mat-sys-outline);
+      }
+      .user-avatar {
+        font-size: 20px;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+      .user-name {
+        font-size: 13px;
+        font-weight: 500;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .logout-icon {
         font-size: 18px;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
       }
-      .spacer {
-        flex: 1;
+      .user-chip:hover .logout-icon {
+        opacity: 1;
+        color: var(--mat-sys-error);
       }
-      .cashier-name {
-        margin: 0 4px 0 8px;
-        font-size: 14px;
-        opacity: 0.9;
-      }
+
       .pos-content {
         flex: 1;
         overflow: hidden;
       }
-      .connected {
-        color: #4caf50;
-      }
+
       .syncing {
-        color: #ff9800;
         animation: spin 1.5s linear infinite;
-      }
-      .offline-indicator {
-        color: #f44336;
-        margin-left: 8px;
       }
       @keyframes spin {
         100% {
@@ -163,19 +307,8 @@ export class PosShellComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
 
-  async onPrinterToggle(): Promise<void> {
-    try {
-      if (this.printer.isConnected) {
-        await this.printer.disconnect();
-        this.snackBar.open('Printer disconnected.', 'OK', { duration: 2000 });
-      } else {
-        await this.printer.connect();
-        this.snackBar.open('Printer connected!', 'OK', { duration: 2000 });
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to connect printer';
-      this.snackBar.open(msg, 'Dismiss', { duration: 5000 });
-    }
+  onPrinterToggle(): void {
+    this.dialog.open(PrinterSetupDialogComponent, { width: '480px' });
   }
 
   onCloseShift(): void {

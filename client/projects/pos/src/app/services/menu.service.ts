@@ -1,5 +1,5 @@
 import { Injectable, Inject, signal } from '@angular/core';
-import { CLIENT_TOKEN, IClient, CategoryDto, CategoryDetailDto } from 'api-client';
+import { CLIENT_TOKEN, IClient, CategoryDto, CategoryDetailDto, ProductDto } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +41,20 @@ export class MenuService {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  getAllCachedProducts(): ProductDto[] {
+    const seen = new Set<number>();
+    const products: ProductDto[] = [];
+    for (const cat of this.categoryCache.values()) {
+      for (const p of cat.products ?? []) {
+        if (p.id != null && !seen.has(p.id)) {
+          seen.add(p.id);
+          products.push(p);
+        }
+      }
+    }
+    return products;
   }
 
   clearCache(): void {

@@ -164,6 +164,9 @@ public class WindowsRawPrintHelper : IWindowsRawPrinter
         return null;
     }
 
+    /// <inheritdoc />
+    public List<string> GetInstalledPrinters() => EnumerateInstalledPrinters();
+
     private static List<string> EnumerateInstalledPrinters()
     {
         var names = new List<string>();

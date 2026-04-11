@@ -53,4 +53,34 @@ public class PrintController : BaseApiController
         var available = await _printerService.IsAvailableAsync(ct);
         return Ok(new PrinterStatusDto { Available = available });
     }
+
+    [HttpGet("printers")]
+    [ProducesResponseType(typeof(PrinterInfoDto), 200)]
+    public async Task<ActionResult<PrinterInfoDto>> GetPrinters(CancellationToken ct)
+    {
+        // Ensure mode is resolved before returning info
+        await _printerService.IsAvailableAsync(ct);
+
+        var info = _printerService.GetPrinterInfo();
+        return Ok(new PrinterInfoDto
+        {
+            Connected = info.Connected,
+            Mode = info.Mode,
+            PrinterName = info.PrinterName,
+            NetworkHost = info.NetworkHost,
+            NetworkPort = info.NetworkPort,
+            InstalledPrinters = _printerService.GetInstalledPrinters(),
+        });
+    }
+
+    [HttpPost("select")]
+    [ProducesResponseType(typeof(PrinterStatusDto), 200)]
+    public async Task<ActionResult<PrinterStatusDto>> SelectPrinter(SelectPrinterDto dto, CancellationToken ct)
+    {
+        _printerService.SelectPrinter(dto.PrinterName);
+
+        // Re-resolve to verify the selected printer works
+        var available = await _printerService.IsAvailableAsync(ct);
+        return Ok(new PrinterStatusDto { Available = available });
+    }
 }

@@ -216,6 +216,15 @@ export interface IClient {
    */
   print_GetStatus(): Observable<PrinterStatusDto>;
   /**
+   * @return OK
+   */
+  print_GetPrinters(): Observable<PrinterInfoDto>;
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  print_SelectPrinter(body?: SelectPrinterDto | undefined): Observable<PrinterStatusDto>;
+  /**
    * @param categoryId (optional)
    * @param availableOnly (optional)
    * @param pageIndex (optional)
@@ -3935,6 +3944,183 @@ export class Client implements IClient {
   }
 
   /**
+   * @return OK
+   */
+  print_GetPrinters(): Observable<PrinterInfoDto> {
+    let url_ = this.baseUrl + '/api/Print/printers';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: any = {
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('get', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPrint_GetPrinters(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPrint_GetPrinters(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PrinterInfoDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PrinterInfoDto>;
+        }),
+      );
+  }
+
+  protected processPrint_GetPrinters(response: HttpResponseBase): Observable<PrinterInfoDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PrinterInfoDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PrinterInfoDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
+   * @param body (optional)
+   * @return OK
+   */
+  print_SelectPrinter(body?: SelectPrinterDto | undefined): Observable<PrinterStatusDto> {
+    let url_ = this.baseUrl + '/api/Print/select';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: any = {
+      body: content_,
+      observe: 'response',
+      responseType: 'json',
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }),
+    };
+
+    return this.http
+      .request('post', url_, options_)
+      .pipe(
+        _observableMergeMap((response_: any) => {
+          return this.processPrint_SelectPrinter(response_);
+        }),
+      )
+      .pipe(
+        _observableCatch((response_: any) => {
+          if (response_ instanceof HttpResponseBase) {
+            try {
+              return this.processPrint_SelectPrinter(response_ as any);
+            } catch (e) {
+              return _observableThrow(e) as any as Observable<PrinterStatusDto>;
+            }
+          } else return _observableThrow(response_) as any as Observable<PrinterStatusDto>;
+        }),
+      );
+  }
+
+  protected processPrint_SelectPrinter(response: HttpResponseBase): Observable<PrinterStatusDto> {
+    const status = response.status;
+    // Prefer JSON body when HttpClient already parsed it (responseType: 'json').
+    if (response instanceof HttpResponse && response.body !== undefined) {
+      return _observableOf(response.body as PrinterStatusDto);
+    }
+
+    const responseBlob =
+      response instanceof HttpResponse
+        ? response.body
+        : (response as any).error instanceof Blob
+          ? (response as any).error
+          : undefined;
+
+    let _headers: any = {};
+    if (response.headers) {
+      for (let key of response.headers.keys()) {
+        _headers[key] = response.headers.get(key);
+      }
+    }
+    if (status === 200) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          let result200: any = null;
+          if (_responseText === '' || _responseText === '[object Object]') {
+            result200 = null;
+          } else {
+            try {
+              result200 = JSON.parse(_responseText, this.jsonParseReviver) as PrinterStatusDto;
+            } catch (e) {
+              throw new Error('Failed to parse JSON response: ' + _responseText);
+            }
+          }
+          return _observableOf(result200);
+        }),
+      );
+    } else if (status !== 200 && status !== 204) {
+      return blobToText(responseBlob).pipe(
+        _observableMergeMap((_responseText: string) => {
+          return throwException(
+            'An unexpected server error occurred.',
+            status,
+            _responseText,
+            _headers,
+          );
+        }),
+      );
+    }
+    return _observableOf(null as any);
+  }
+
+  /**
    * @param categoryId (optional)
    * @param availableOnly (optional)
    * @param pageIndex (optional)
@@ -7440,6 +7626,15 @@ export interface PrintResultDto {
   success?: boolean;
 }
 
+export interface PrinterInfoDto {
+  connected?: boolean;
+  mode?: string | null;
+  printerName?: string | null;
+  networkHost?: string | null;
+  networkPort?: number | null;
+  installedPrinters?: string[] | null;
+}
+
 export interface PrinterStatusDto {
   available?: boolean;
 }
@@ -7554,6 +7749,10 @@ export interface SalesRangeReportDto {
   taxCollected?: number;
   netSales?: number;
   dailyBreakdown?: DailySalesPointDto[] | null;
+}
+
+export interface SelectPrinterDto {
+  printerName?: string | null;
 }
 
 export interface ShiftReportDto {

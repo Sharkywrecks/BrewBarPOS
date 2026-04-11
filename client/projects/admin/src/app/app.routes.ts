@@ -48,6 +48,10 @@ export const routes: Routes = [
         path: 'terminals',
         loadComponent: () => import('./terminals/terminals.page').then((m) => m.TerminalsPage),
       },
+      {
+        path: 'settings',
+        loadComponent: () => import('./settings/settings.page').then((m) => m.SettingsPage),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

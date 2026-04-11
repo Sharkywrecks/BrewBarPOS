@@ -23,7 +23,7 @@ export class App {
   private readonly keyboard = inject(VirtualKeyboardService);
   private readonly router = inject(Router);
 
-  @HostListener('focusin', ['$event'])
+  @HostListener('document:focusin', ['$event'])
   onFocusIn(event: FocusEvent): void {
     const target = event.target;
     if (
@@ -34,7 +34,7 @@ export class App {
     }
   }
 
-  @HostListener('focusout', ['$event'])
+  @HostListener('document:focusout', ['$event'])
   onFocusOut(event: FocusEvent): void {
     const related = event.relatedTarget;
     // If focus moved to another input, the focusin handler will take over

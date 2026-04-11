@@ -4,6 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:pos": "ng serve pos --port 4200",
+    "start:admin": "ng serve admin --port 4201",
+    "start:all": "ng serve admin --port 4201 & ng serve pos --port 4200",
     "build": "ng build",
     "build:libs": "ng build shared-models && ng build api-client && ng build auth && ng build ui && ng build printing && ng build sync",
     "watch": "ng build --watch --configuration development",

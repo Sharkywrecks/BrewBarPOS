@@ -44,6 +44,8 @@ function createMockApiClient(): { [K in keyof PrintApiClient]: ReturnType<typeof
   return {
     print_Print: vi.fn(),
     print_GetStatus: vi.fn(),
+    print_GetPrinters: vi.fn(),
+    print_SelectPrinter: vi.fn(),
   };
 }
 
