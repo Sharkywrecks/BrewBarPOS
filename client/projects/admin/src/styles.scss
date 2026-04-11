@@ -42,4 +42,109 @@ body {
   margin: 0;
   height: 100%;
 }
-/* You can add global styles to this file, and also import other style files */
+// Simple-keyboard base styles (required for layout/grid)
+@import 'simple-keyboard/build/css/index.css';
+
+// Virtual keyboard — uses popover API to render in browser top layer
+.vk-popover {
+  position: fixed;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.vk-popover::backdrop {
+  display: none;
+}
+
+.vk-backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.vk-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: auto;
+  background: var(--mat-sys-surface-container, #f0f0f0);
+  border-top: 1px solid var(--mat-sys-outline-variant, #ccc);
+  padding: 8px 8px 12px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.vk-close {
+  position: absolute;
+  top: -40px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--mat-sys-surface-container-high, #e0e0e0);
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.vk-close:active {
+  background: var(--mat-sys-primary-container, #ddd);
+}
+
+.vk-close-icon {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vk-container .simple-keyboard {
+  max-width: 900px;
+  margin: 0 auto;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+.vk-container .simple-keyboard .hg-button {
+  height: 52px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface, #fff);
+  color: var(--mat-sys-on-surface, #1a1a1a);
+  border: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.vk-container .simple-keyboard .hg-button:active {
+  background: var(--mat-sys-primary-container, #ddd);
+  color: var(--mat-sys-on-primary-container, #000);
+}
+
+.vk-container .simple-keyboard .hg-button.hg-activeButton {
+  background: var(--mat-sys-primary-container, #ddd);
+}
+
+.vk-container .simple-keyboard .hg-row {
+  margin-bottom: 4px;
+}
+
+.vk-container .simple-keyboard .hg-button[data-skbtn='{bksp}'],
+.vk-container .simple-keyboard .hg-button[data-skbtn='{enter}'],
+.vk-container .simple-keyboard .hg-button[data-skbtn='{shift}'],
+.vk-container .simple-keyboard .hg-button[data-skbtn='{lock}'] {
+  background: var(--mat-sys-surface-container-high, #e0e0e0);
+}
+
+.vk-container .simple-keyboard .hg-button[data-skbtn='{space}'] {
+  min-width: 250px;
+}

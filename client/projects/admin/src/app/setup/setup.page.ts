@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from 'auth';
 import { InitialSetupDto } from 'api-client';
@@ -28,6 +29,7 @@ import { InitialSetupDto } from 'api-client';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatIconModule,
     MatProgressSpinnerModule,
   ],
   template: `
@@ -73,23 +75,29 @@ import { InitialSetupDto } from 'api-client';
               <mat-label>Password</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showPassword() ? 'text' : 'password'"
                 [(ngModel)]="password"
                 name="password"
                 required
                 minlength="8"
                 autocomplete="new-password"
               />
-              <mat-hint
-                >Min 8 chars, must include a digit, a lowercase letter, and a symbol.</mat-hint
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="showPassword.set(!showPassword())"
               >
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-hint>Min 8 chars, with a lowercase, digit, and symbol</mat-hint>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>PIN (4-6 digits)</mat-label>
               <input
                 matInput
-                type="password"
+                [type]="showPin() ? 'text' : 'password'"
                 inputmode="numeric"
                 pattern="\\d{4,6}"
                 [(ngModel)]="pin"
@@ -99,6 +107,9 @@ import { InitialSetupDto } from 'api-client';
                 maxlength="6"
                 autocomplete="new-password"
               />
+              <button mat-icon-button matSuffix type="button" (click)="showPin.set(!showPin())">
+                <mat-icon>{{ showPin() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
               <mat-hint>Used for the POS quick-login screen.</mat-hint>
             </mat-form-field>
 
@@ -156,7 +167,7 @@ import { InitialSetupDto } from 'api-client';
       .setup-form {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 16px;
       }
       .full-width {
         width: 100%;
@@ -180,6 +191,8 @@ export class SetupPage {
   protected email = '';
   protected password = '';
   protected pin = '';
+  protected readonly showPassword = signal(false);
+  protected readonly showPin = signal(false);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
 

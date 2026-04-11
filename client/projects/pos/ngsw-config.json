@@ -27,6 +27,12 @@
       }
     }
   ],
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/__**",
+    "!/admin/**"
+  ],
   "dataGroups": [
     {
       "name": "catalog",
