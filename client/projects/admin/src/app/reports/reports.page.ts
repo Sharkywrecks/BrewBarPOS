@@ -16,7 +16,8 @@ import { API_BASE_URL } from 'api-client';
 import { firstValueFrom } from 'rxjs';
 
 interface DailyReport {
-  date: string;
+  from: string;
+  to: string;
   orderCount: number;
   voidedCount: number;
   itemsSold: number;
@@ -458,30 +459,28 @@ export class ReportsPage implements OnInit {
     }
   }
 
-  private formatDate(d: Date): string {
-    return d.toISOString().split('T')[0];
+  // Builds the UTC instant for the start of the local day containing `d`,
+  // then for the exclusive end (start of the day after `endLocal`). The server
+  // uses [from, to) semantics so a Seychelles operator's "today" lines up with
+  // their wall clock instead of UTC midnight.
+  private rangeInstants(startLocal: Date, endLocal: Date): { from: string; to: string } {
+    const from = new Date(startLocal.getFullYear(), startLocal.getMonth(), startLocal.getDate());
+    const to = new Date(endLocal.getFullYear(), endLocal.getMonth(), endLocal.getDate() + 1);
+    return { from: from.toISOString(), to: to.toISOString() };
   }
 
   async loadAll() {
     if (!this.fromDate) return;
     this.loading.set(true);
     try {
-      const from = this.formatDate(this.fromDate);
-      const to = this.toDate ? this.formatDate(this.toDate) : from;
+      const { from, to } = this.rangeInstants(this.fromDate, this.toDate ?? this.fromDate);
+      const qs = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
       const [daily, products, payments] = await Promise.all([
+        firstValueFrom(this.http.get<DailyReport>(`${this.baseUrl}/api/reports/daily?${qs}`)),
         firstValueFrom(
-          this.http.get<DailyReport>(`${this.baseUrl}/api/reports/daily?date=${from}`),
+          this.http.get<ProductPerf[]>(`${this.baseUrl}/api/reports/products?${qs}&limit=10`),
         ),
-        firstValueFrom(
-          this.http.get<ProductPerf[]>(
-            `${this.baseUrl}/api/reports/products?from=${from}&to=${to}&limit=10`,
-          ),
-        ),
-        firstValueFrom(
-          this.http.get<PaymentSummary>(
-            `${this.baseUrl}/api/reports/payments?from=${from}&to=${to}`,
-          ),
-        ),
+        firstValueFrom(this.http.get<PaymentSummary>(`${this.baseUrl}/api/reports/payments?${qs}`)),
       ]);
       this.daily.set(daily);
       this.topProducts.set(products);

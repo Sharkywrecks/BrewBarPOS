@@ -26,10 +26,7 @@ export class App {
   @HostListener('document:focusin', ['$event'])
   onFocusIn(event: FocusEvent): void {
     const target = event.target;
-    if (
-      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
-      !this.isLoginRoute()
-    ) {
+    if (isTextEntryElement(target) && !this.isLoginRoute()) {
       this.keyboard.show(target);
     }
   }
@@ -37,14 +34,13 @@ export class App {
   @HostListener('document:focusout', ['$event'])
   onFocusOut(event: FocusEvent): void {
     const related = event.relatedTarget;
-    // If focus moved to another input, the focusin handler will take over
-    if (related instanceof HTMLInputElement || related instanceof HTMLTextAreaElement) return;
+    // If focus moved to another text entry element, the focusin handler will take over
+    if (isTextEntryElement(related)) return;
     // If focus moved to the keyboard container, keep keyboard open
     if (related instanceof HTMLElement && related.closest('.vk-container')) return;
     // Delay slightly so preventDefault on keyboard mousedown/touchstart can keep focus
     setTimeout(() => {
-      const active = document.activeElement;
-      if (!(active instanceof HTMLInputElement) && !(active instanceof HTMLTextAreaElement)) {
+      if (!isTextEntryElement(document.activeElement)) {
         this.keyboard.hide();
       }
     }, 50);
@@ -53,4 +49,25 @@ export class App {
   private isLoginRoute(): boolean {
     return this.router.url.startsWith('/login');
   }
+}
+
+const TEXT_INPUT_TYPES = new Set([
+  'text',
+  'password',
+  'email',
+  'tel',
+  'url',
+  'search',
+  'number',
+  '',
+]);
+
+function isTextEntryElement(
+  target: EventTarget | null,
+): target is HTMLInputElement | HTMLTextAreaElement {
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has((target.type ?? '').toLowerCase());
+  }
+  return false;
 }

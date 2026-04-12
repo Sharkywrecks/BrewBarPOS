@@ -19,17 +19,29 @@ public class ReportsController : BaseApiController
         _unitOfWork = unitOfWork;
     }
 
-    /// <summary>Daily sales report for a specific date.</summary>
+    // Resolves a [from, to) UTC instant window. `from` is inclusive, `to` is exclusive.
+    // Callers should pass instants representing the user's local-day boundaries so that
+    // a "day" lines up with the operator's wall clock, not UTC midnight.
+    private static (DateTime from, DateTime to) ResolveRange(DateTime? from, DateTime? to)
+    {
+        var todayUtc = DateTime.UtcNow.Date;
+        var fromInstant = from ?? todayUtc;
+        var toInstant = to ?? fromInstant.AddDays(1);
+        return (fromInstant, toInstant);
+    }
+
+    /// <summary>Aggregated sales report for a UTC instant range [from, to).</summary>
     [HttpGet("daily")]
     public async Task<ActionResult<DailySalesReportDto>> GetDailyReport(
-        [FromQuery] DateTime? date, CancellationToken ct)
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken ct = default)
     {
-        var reportDate = date?.Date ?? DateTime.UtcNow.Date;
-        var nextDay = reportDate.AddDays(1);
+        var (fromInstant, toInstant) = ResolveRange(from, to);
 
         var orders = await _unitOfWork.GetQueryable<Order>()
             .Include(o => o.LineItems)
-            .Where(o => o.CreatedAtUtc >= reportDate && o.CreatedAtUtc < nextDay)
+            .Where(o => o.CreatedAtUtc >= fromInstant && o.CreatedAtUtc < toInstant)
             .ToListAsync(ct);
 
         var completedOrders = orders.Where(o => o.Status == OrderStatus.Completed).ToList();
@@ -57,7 +69,8 @@ public class ReportsController : BaseApiController
 
         return Ok(new DailySalesReportDto
         {
-            Date = reportDate,
+            From = fromInstant,
+            To = toInstant,
             OrderCount = completedOrders.Count,
             VoidedCount = voidedOrders.Count,
             ItemsSold = itemsSold,
@@ -71,18 +84,17 @@ public class ReportsController : BaseApiController
         });
     }
 
-    /// <summary>Sales trend over a date range.</summary>
+    /// <summary>Sales trend over a UTC instant range [from, to), bucketed by UTC day.</summary>
     [HttpGet("sales")]
     public async Task<ActionResult<SalesRangeReportDto>> GetSalesRange(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
-        CancellationToken ct)
+        CancellationToken ct = default)
     {
-        var fromDate = from?.Date ?? DateTime.UtcNow.Date.AddDays(-30);
-        var toDate = (to?.Date ?? DateTime.UtcNow.Date).AddDays(1);
+        var (fromInstant, toInstant) = ResolveRange(from, to);
 
         var orders = await _unitOfWork.GetQueryable<Order>()
-            .Where(o => o.CreatedAtUtc >= fromDate && o.CreatedAtUtc < toDate
+            .Where(o => o.CreatedAtUtc >= fromInstant && o.CreatedAtUtc < toInstant
                      && o.Status == OrderStatus.Completed)
             .ToListAsync(ct);
 
@@ -99,8 +111,8 @@ public class ReportsController : BaseApiController
 
         return Ok(new SalesRangeReportDto
         {
-            From = fromDate,
-            To = toDate.AddDays(-1),
+            From = fromInstant,
+            To = toInstant,
             TotalOrders = orders.Count,
             GrossSales = orders.Sum(o => o.Total),
             TaxCollected = orders.Sum(o => o.TaxAmount),
@@ -109,7 +121,7 @@ public class ReportsController : BaseApiController
         });
     }
 
-    /// <summary>Top-selling products over a date range.</summary>
+    /// <summary>Top-selling products over a UTC instant range [from, to).</summary>
     [HttpGet("products")]
     public async Task<ActionResult<IReadOnlyList<ProductPerformanceDto>>> GetProductPerformance(
         [FromQuery] DateTime? from,
@@ -117,16 +129,14 @@ public class ReportsController : BaseApiController
         [FromQuery] int limit = 20,
         CancellationToken ct = default)
     {
-        var fromDate = from?.Date ?? DateTime.UtcNow.Date.AddDays(-30);
-        var toDate = (to?.Date ?? DateTime.UtcNow.Date).AddDays(1);
+        var (fromInstant, toInstant) = ResolveRange(from, to);
 
         var lineItems = await _unitOfWork.GetQueryable<Order>()
-            .Where(o => o.CreatedAtUtc >= fromDate && o.CreatedAtUtc < toDate
+            .Where(o => o.CreatedAtUtc >= fromInstant && o.CreatedAtUtc < toInstant
                      && o.Status == OrderStatus.Completed)
             .SelectMany(o => o.LineItems)
             .ToListAsync(ct);
 
-        // Look up category names from products
         var productIds = lineItems.Select(li => li.ProductId).Distinct().ToList();
         var products = await _unitOfWork.GetQueryable<Core.Entities.CatalogAggregate.Product>()
             .Include(p => p.Category)
@@ -154,18 +164,17 @@ public class ReportsController : BaseApiController
         return Ok(performance);
     }
 
-    /// <summary>Payment method breakdown over a date range.</summary>
+    /// <summary>Payment method breakdown over a UTC instant range [from, to).</summary>
     [HttpGet("payments")]
     public async Task<ActionResult<PaymentSummaryReportDto>> GetPaymentSummary(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         CancellationToken ct = default)
     {
-        var fromDate = from?.Date ?? DateTime.UtcNow.Date.AddDays(-30);
-        var toDate = (to?.Date ?? DateTime.UtcNow.Date).AddDays(1);
+        var (fromInstant, toInstant) = ResolveRange(from, to);
 
         var payments = await _unitOfWork.GetQueryable<Payment>()
-            .Where(p => p.CreatedAtUtc >= fromDate && p.CreatedAtUtc < toDate)
+            .Where(p => p.CreatedAtUtc >= fromInstant && p.CreatedAtUtc < toInstant)
             .ToListAsync(ct);
 
         var completed = payments.Where(p => p.Status == PaymentStatus.Completed).ToList();
@@ -173,8 +182,8 @@ public class ReportsController : BaseApiController
 
         return Ok(new PaymentSummaryReportDto
         {
-            From = fromDate,
-            To = toDate.AddDays(-1),
+            From = fromInstant,
+            To = toInstant,
             CashTotal = completed.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.Total),
             CashCount = completed.Count(p => p.Method == PaymentMethod.Cash),
             CardTotal = completed.Where(p => p.Method == PaymentMethod.Card).Sum(p => p.Total),

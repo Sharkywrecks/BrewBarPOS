@@ -351,22 +351,30 @@ export class DashboardPage implements OnInit {
   private maxTrend = 1;
 
   async ngOnInit() {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const startOfWeekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+
+    const todayFrom = encodeURIComponent(startOfToday.toISOString());
+    const todayTo = encodeURIComponent(startOfTomorrow.toISOString());
+    const weekFrom = encodeURIComponent(startOfWeekAgo.toISOString());
 
     try {
       const [daily, week, products] = await Promise.all([
         firstValueFrom(
-          this.http.get<DailyReport>(`${this.baseUrl}/api/reports/daily?date=${today}`),
+          this.http.get<DailyReport>(
+            `${this.baseUrl}/api/reports/daily?from=${todayFrom}&to=${todayTo}`,
+          ),
         ),
         firstValueFrom(
           this.http.get<SalesRange>(
-            `${this.baseUrl}/api/reports/sales?from=${weekAgo}&to=${today}`,
+            `${this.baseUrl}/api/reports/sales?from=${weekFrom}&to=${todayTo}`,
           ),
         ),
         firstValueFrom(
           this.http.get<ProductPerf[]>(
-            `${this.baseUrl}/api/reports/products?from=${today}&to=${today}&limit=5`,
+            `${this.baseUrl}/api/reports/products?from=${todayFrom}&to=${todayTo}&limit=5`,
           ),
         ),
       ]);

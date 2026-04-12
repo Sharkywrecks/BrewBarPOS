@@ -150,16 +150,22 @@ describe('ReportsPage', () => {
     expect(component.paymentSummary()).toEqual(PAYMENTS);
   });
 
-  it('loadAll sends correct date in API URLs', async () => {
+  it('loadAll sends local-day UTC instants as from/to in API URLs', async () => {
     component.fromDate = new Date(2026, 3, 10);
     component.toDate = new Date(2026, 3, 12);
 
     await component.loadAll();
 
-    const fromStr = new Date(2026, 3, 10).toISOString().split('T')[0];
-    const toStr = new Date(2026, 3, 12).toISOString().split('T')[0];
-    expect(http.get).toHaveBeenCalledWith(expect.stringContaining(`date=${fromStr}`));
-    expect(http.get).toHaveBeenCalledWith(expect.stringContaining(`from=${fromStr}&to=${toStr}`));
+    const fromInstant = encodeURIComponent(new Date(2026, 3, 10).toISOString());
+    const toInstant = encodeURIComponent(new Date(2026, 3, 13).toISOString());
+    const expectedQs = `from=${fromInstant}&to=${toInstant}`;
+    expect(http.get).toHaveBeenCalledWith(expect.stringContaining(`/reports/daily?${expectedQs}`));
+    expect(http.get).toHaveBeenCalledWith(
+      expect.stringContaining(`/reports/products?${expectedQs}`),
+    );
+    expect(http.get).toHaveBeenCalledWith(
+      expect.stringContaining(`/reports/payments?${expectedQs}`),
+    );
   });
 
   it('loadAll skips if fromDate is null', async () => {

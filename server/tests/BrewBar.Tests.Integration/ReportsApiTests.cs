@@ -10,6 +10,15 @@ public class ReportsApiTests : IClassFixture<TestFixture>
 
     public ReportsApiTests(TestFixture fixture) => _f = fixture;
 
+    private static (string from, string to) TodayUtcRange()
+    {
+        var today = DateTime.UtcNow.Date;
+        return (
+            Uri.EscapeDataString(today.ToString("o")),
+            Uri.EscapeDataString(today.AddDays(1).ToString("o"))
+        );
+    }
+
     private async Task CreateCompletedOrder(
         HttpClient client,
         int productId,
@@ -84,8 +93,9 @@ public class ReportsApiTests : IClassFixture<TestFixture>
     public async Task GetDailyReport_FutureDate_ReturnsZeros()
     {
         var client = await _f.AsAdmin();
-        var future = DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-dd");
-        var response = await client.GetAsync($"/api/reports/daily?date={future}");
+        var futureFrom = Uri.EscapeDataString(DateTime.UtcNow.AddYears(1).Date.ToString("o"));
+        var futureTo = Uri.EscapeDataString(DateTime.UtcNow.AddYears(1).Date.AddDays(1).ToString("o"));
+        var response = await client.GetAsync($"/api/reports/daily?from={futureFrom}&to={futureTo}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -127,8 +137,8 @@ public class ReportsApiTests : IClassFixture<TestFixture>
         await CreateCompletedOrder(client, 1, "Perf Test A", 20.00m, 1);
         await CreateCompletedOrder(client, 2, "Perf Test B", 5.00m, 1);
 
-        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        var response = await client.GetAsync($"/api/reports/products?from={today}&to={today}&limit=10");
+        var (from, to) = TodayUtcRange();
+        var response = await client.GetAsync($"/api/reports/products?from={from}&to={to}&limit=10");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -146,8 +156,8 @@ public class ReportsApiTests : IClassFixture<TestFixture>
     public async Task GetProductPerformance_RespectsLimit()
     {
         var client = await _f.AsAdmin();
-        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        var response = await client.GetAsync($"/api/reports/products?from={today}&to={today}&limit=1");
+        var (from, to) = TodayUtcRange();
+        var response = await client.GetAsync($"/api/reports/products?from={from}&to={to}&limit=1");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -170,8 +180,8 @@ public class ReportsApiTests : IClassFixture<TestFixture>
         await CreateCompletedOrder(client, 1, "Cash Item", 10.00m, 1, paymentMethod: 0); // Cash
         await CreateCompletedOrder(client, 1, "Card Item", 15.00m, 1, paymentMethod: 1); // Card
 
-        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        var response = await client.GetAsync($"/api/reports/payments?from={today}&to={today}");
+        var (from, to) = TodayUtcRange();
+        var response = await client.GetAsync($"/api/reports/payments?from={from}&to={to}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();

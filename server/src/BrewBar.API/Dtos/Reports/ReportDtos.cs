@@ -2,7 +2,8 @@ namespace BrewBar.API.Dtos.Reports;
 
 public class DailySalesReportDto
 {
-    public DateTime Date { get; set; }
+    public DateTime From { get; set; }
+    public DateTime To { get; set; }
     public int OrderCount { get; set; }
     public int VoidedCount { get; set; }
     public int ItemsSold { get; set; }

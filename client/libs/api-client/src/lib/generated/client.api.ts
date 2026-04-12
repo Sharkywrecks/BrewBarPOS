@@ -294,10 +294,14 @@ export interface IClient {
    */
   products_RemoveModifier(productId: number, modifierId: number): Observable<void>;
   /**
-   * @param date (optional)
+   * @param from (optional)
+   * @param to (optional)
    * @return OK
    */
-  reports_GetDailyReport(date?: Date | undefined): Observable<DailySalesReportDto>;
+  reports_GetDailyReport(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<DailySalesReportDto>;
   /**
    * @param from (optional)
    * @param to (optional)
@@ -5117,14 +5121,21 @@ export class Client implements IClient {
   }
 
   /**
-   * @param date (optional)
+   * @param from (optional)
+   * @param to (optional)
    * @return OK
    */
-  reports_GetDailyReport(date?: Date | undefined): Observable<DailySalesReportDto> {
+  reports_GetDailyReport(
+    from?: Date | undefined,
+    to?: Date | undefined,
+  ): Observable<DailySalesReportDto> {
     let url_ = this.baseUrl + '/api/Reports/daily?';
-    if (date === null) throw new Error("The parameter 'date' cannot be null.");
-    else if (date !== undefined)
-      url_ += 'date=' + encodeURIComponent(date ? '' + date.toISOString() : '') + '&';
+    if (from === null) throw new Error("The parameter 'from' cannot be null.");
+    else if (from !== undefined)
+      url_ += 'from=' + encodeURIComponent(from ? '' + from.toISOString() : '') + '&';
+    if (to === null) throw new Error("The parameter 'to' cannot be null.");
+    else if (to !== undefined)
+      url_ += 'to=' + encodeURIComponent(to ? '' + to.toISOString() : '') + '&';
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: any = {
@@ -7432,7 +7443,8 @@ export interface DailySalesPointDto {
 }
 
 export interface DailySalesReportDto {
-  date?: Date;
+  from?: Date;
+  to?: Date;
   orderCount?: number;
   voidedCount?: number;
   itemsSold?: number;

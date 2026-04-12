@@ -25,7 +25,7 @@ export class App {
   @HostListener('document:focusin', ['$event'])
   onFocusIn(event: FocusEvent): void {
     const target = event.target;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+    if (isTextEntryElement(target)) {
       this.keyboard.show(target);
     }
   }
@@ -33,13 +33,33 @@ export class App {
   @HostListener('document:focusout', ['$event'])
   onFocusOut(event: FocusEvent): void {
     const related = event.relatedTarget;
-    if (related instanceof HTMLInputElement || related instanceof HTMLTextAreaElement) return;
+    if (isTextEntryElement(related)) return;
     if (related instanceof HTMLElement && related.closest('.vk-container')) return;
     setTimeout(() => {
-      const active = document.activeElement;
-      if (!(active instanceof HTMLInputElement) && !(active instanceof HTMLTextAreaElement)) {
+      if (!isTextEntryElement(document.activeElement)) {
         this.keyboard.hide();
       }
     }, 50);
   }
+}
+
+const TEXT_INPUT_TYPES = new Set([
+  'text',
+  'password',
+  'email',
+  'tel',
+  'url',
+  'search',
+  'number',
+  '',
+]);
+
+function isTextEntryElement(
+  target: EventTarget | null,
+): target is HTMLInputElement | HTMLTextAreaElement {
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has((target.type ?? '').toLowerCase());
+  }
+  return false;
 }
