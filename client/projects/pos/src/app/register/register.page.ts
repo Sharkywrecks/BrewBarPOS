@@ -216,6 +216,11 @@ export class RegisterPage implements OnInit, OnDestroy {
     this.clockInterval = setInterval(() => this.currentTime.set(this.formatTime()), 15_000);
     try {
       await this.menu.loadCategories();
+      const cats = this.menu.categories();
+      if (cats.length > 0) {
+        this.selectedCategoryIndex.set(0);
+        await this.menu.selectCategory(cats[0].id!);
+      }
       this.updateProducts();
     } catch {
       this.loadError.set(true);
